@@ -223,7 +223,10 @@ const SS=window.speechSynthesis;
 function pick(){try{const v=SS.getVoices();voice=v.find(x=>/ko[-_]KR/i.test(x.lang)&&/Yuna|Heami|SunHi|Google|Female/i.test(x.name))||v.find(x=>/^ko/i.test(x.lang))||null}catch(e){}}
 if(SS){pick();SS.onvoiceschanged=pick}
 const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-let started=false;function speak(t){if(!SS||!voiceOn)return;try{if(SS.speaking||SS.pending)SS.cancel();SS.resume();const u=new SpeechSynthesisUtterance(t.replace(/\n/g,' ').replace(/[🐶🔥]/g,''));u.lang='ko-KR';if(voice)u.voice=voice;u.rate=1.02;u.pitch=0.9;u.onstart=()=>{started=true};SS.speak(u)}catch(e){}}
+let AU=null;const VMAP={};function vkey(t){return VMAP[t]}
+function playFile(k,t){try{if(AU){AU.pause()}AU=new Audio('voice/'+k+'.mp3');AU.onplay=()=>{started=true};AU.play().catch(()=>speakTTS(t));AU.onerror=()=>speakTTS(t);return true}catch(e){return false}}
+function speak(t){if(!voiceOn)return;const k=vkey(t);if(k){if(SS)try{SS.cancel()}catch(e){};playFile(k,t);return}speakTTS(t)}
+let started=false;function speakTTS(t){if(!SS||!voiceOn)return;try{if(SS.speaking||SS.pending)SS.cancel();SS.resume();const u=new SpeechSynthesisUtterance(t.replace(/\n/g,' ').replace(/[🐶🔥]/g,''));u.lang='ko-KR';if(voice)u.voice=voice;u.rate=1.02;u.pitch=0.9;u.onstart=()=>{started=true};SS.speak(u)}catch(e){}}
 function add(cls){const d=document.createElement('div');d.className='msg '+cls;log.append(d);log.scrollTop=log.scrollHeight;return d}
 async function say(text,links,quiet){busy=true;if(!quiet)speak(text);const d=add('ai');const c=document.createElement('span');c.className='caret';
  const t=document.createTextNode('');d.append(t,c);
@@ -231,13 +234,13 @@ async function say(text,links,quiet){busy=true;if(!quiet)speak(text);const d=add
  c.remove();skip=false;
  const box=document.createElement('div');if(links.length)d.append(box);for(const k of links){const [n,u,col]=L[k];const a=document.createElement('a');a.href=u;a.textContent=n+' →';a.style.setProperty('--c',col);if(u[0]!=='#'){a.rel='noopener noreferrer'}box.append(a)}
  log.scrollTop=log.scrollHeight;busy=false}
-QA.forEach(([q,a,l])=>{const b=document.createElement('button');b.type='button';b.textContent=q;b.onclick=()=>{if(!woke){woke=true;$('boot').classList.add('off')}if(busy)skip=true;chain=chain.then(()=>{const m=add('me');m.textContent=q;return say(a,l)})};$('qs').append(b)});
+QA.forEach(([q,a,l],i)=>{VMAP[a]='qa'+i;const b=document.createElement('button');b.type='button';b.textContent=q;b.onclick=()=>{if(!woke){woke=true;$('boot').classList.add('off')}if(busy)skip=true;chain=chain.then(()=>{const m=add('me');m.textContent=q;return say(a,l)})};$('qs').append(b)});
 
 /* 부팅 → 터치하면 깨어나며 인사(음성) */
 const h=new Date().getHours();
 const hi=h<6?'늦은 밤이네요':h<12?'좋은 아침이에요':h<18?'좋은 오후예요':'좋은 저녁이에요';
 const greet='안녕하십니까. SEOL & Co.에 오신 걸 환영합니다.\n저는 비서실장 S.E.O.L이에요. 아래에서 궁금한 걸 골라 주세요.';
-let woke=false;
+let woke=false;VMAP[greet]='greet';
 function wake(){if(woke)return;woke=true;$('boot').classList.add('off');chain=say(greet,[],started&&SS&&SS.speaking)}
 /* 바로 말하기 시도: 허용되는 브라우저면 터치 없이 바로 인사 */
 if(!IOS)setTimeout(()=>{speak(greet);setTimeout(()=>{if(started)wake()},700)},400);
