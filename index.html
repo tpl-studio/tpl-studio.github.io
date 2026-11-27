@@ -49,6 +49,9 @@ body{min-height:100vh;overflow-x:clip;padding:calc(env(safe-area-inset-top) + 14
 .tap{position:absolute;left:0;right:0;bottom:56px;text-align:center;font:500 11px Orbitron,sans-serif;letter-spacing:.16em;color:var(--h);opacity:.8;animation:blink 2.4s infinite}
 .boot{border:0;width:100%;cursor:pointer;flex-direction:column;position:absolute;inset:0;text-align:center;line-height:2;display:grid;place-items:center;background:rgba(4,7,12,.62);backdrop-filter:blur(2px);font:500 12px Orbitron,sans-serif;letter-spacing:.2em;color:var(--h);z-index:3;transition:opacity .6s}
 .boot.off{opacity:0;pointer-events:none}
+.boot.ready{background:transparent;backdrop-filter:none;place-items:end center;padding-bottom:14px}
+.boot .pill{display:inline-block;padding:11px 20px;border-radius:999px;border:1px solid var(--h);background:rgba(6,20,30,.78);font:800 14px 'Noto Sans KR',sans-serif;letter-spacing:.04em;color:#e8fbff;box-shadow:0 0 22px rgba(63,240,255,.45);animation:pp 1.6s ease-in-out infinite}
+@keyframes pp{0%,100%{transform:scale(1);box-shadow:0 0 14px rgba(63,240,255,.35)}50%{transform:scale(1.06);box-shadow:0 0 30px rgba(63,240,255,.7)}}
 
 /* 대화창 */
 .talk{position:relative;border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,rgba(8,34,48,.78),rgba(4,14,20,.78));padding:14px;box-shadow:0 0 30px rgba(63,240,255,.12),inset 0 0 24px rgba(63,240,255,.06);margin-top:-4px}
@@ -147,7 +150,7 @@ footer{text-align:center;color:#4d6370;font-size:11.5px;margin-top:22px;line-hei
   </div>
 
   <section class="talk" aria-label="설비서와 대화">
-    <div class="hd">◉ S.E.O.L · 안내 비서<span id="clock">--:--</span><button id="snd" type="button">🔊 ON</button></div>
+    <div class="hd">◉ S.E.O.L · 비서실장<span id="clock">--:--</span><button id="snd" type="button">🔊 ON</button></div>
     <div id="log" aria-live="polite"></div>
     <div class="qs" id="qs"></div>
     <p class="note">설비서는 정해진 안내를 드리는 홀로그램 비서예요. 개인적인 질문은 인스타 DM으로 보내 주세요.</p>
@@ -241,10 +244,13 @@ const h=new Date().getHours();
 const hi=h<6?'늦은 밤이네요':h<12?'좋은 아침이에요':h<18?'좋은 오후예요':'좋은 저녁이에요';
 const greet='안녕하십니까. SEOL & Co.에 오신 걸 환영합니다.\n저는 비서실장 S.E.O.L이에요. 아래에서 궁금한 걸 골라 주세요.';
 let woke=false;VMAP[greet]='greet';
-function wake(){if(woke)return;woke=true;$('boot').classList.add('off');chain=say(greet,[],started&&SS&&SS.speaking)}
+let shown=false;
+function wake(){if(woke)return;woke=true;$('boot').classList.add('off');if(shown){speak(greet)}else{chain=say(greet,[],started&&SS&&SS.speaking)}}
+/* 링크 열면 인사말은 글자로 바로 타이핑(소리 없이) */
+setTimeout(()=>{if(!woke&&!shown){shown=true;chain=say(greet,[],true)}},700);
 /* 바로 말하기 시도: 허용되는 브라우저면 터치 없이 바로 인사 */
 if(!IOS)setTimeout(()=>{speak(greet);setTimeout(()=>{if(started)wake()},700)},400);
-setTimeout(()=>{if(!woke)$('bt').innerHTML='HOLOGRAM READY<br><b style="font-size:15px;letter-spacing:.06em">▶ 화면을 터치하면 설비서가 깨어납니다</b>'},900);
+setTimeout(()=>{if(!woke){$('boot').classList.add('ready');$('bt').innerHTML='<span class="pill">🔊 탭해서 설비서 목소리 듣기</span>'}},600);
 $('boot').addEventListener('click',wake);
 document.addEventListener('click',e=>{if(!e.target.closest('a,#qs,#snd'))wake()},{once:true});
 addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')wake()},{once:true});
