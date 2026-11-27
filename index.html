@@ -246,7 +246,7 @@ function wake(){if(woke)return;woke=true;$('boot').classList.add('off');chain=sa
 if(!IOS)setTimeout(()=>{speak(greet);setTimeout(()=>{if(started)wake()},700)},400);
 setTimeout(()=>{if(!woke)$('bt').innerHTML='HOLOGRAM READY<br><b style="font-size:15px;letter-spacing:.06em">▶ 화면을 터치하면 설비서가 깨어납니다</b>'},900);
 $('boot').addEventListener('click',wake);
-document.addEventListener('pointerdown',e=>{if(!e.target.closest('a,#qs,#snd'))wake()},{once:true});
+document.addEventListener('click',e=>{if(!e.target.closest('a,#qs,#snd'))wake()},{once:true});
 addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')wake()},{once:true});
 $('snd').onclick=()=>{voiceOn=!voiceOn;$('snd').textContent=voiceOn?'🔊 ON':'🔇 OFF';if(!voiceOn&&SS)SS.cancel()};
 setInterval(()=>{$('clock').textContent=new Date().toTimeString().slice(0,5)},1000);
