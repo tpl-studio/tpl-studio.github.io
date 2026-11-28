@@ -103,6 +103,7 @@ input[type=text]{width:100%;font:inherit;font-size:16px;padding:10px 14px;border
   <h2>무엇이 궁금하신가요?</h2>
   <div class="lab">타로 방식</div><div class="chips" id="modes"></div>
   <div class="lab">상담 주제</div><div class="chips" id="cats"></div>
+  <div class="lab">카드 방향</div><div class="chips" id="revs"><button class="chip" data-r="1">역방향 포함 <small>진짜 타로처럼 거꾸로 나올 수 있어요</small></button><button class="chip" data-r="0">정방향만 <small>처음이라면 편해요</small></button></div>
   <div class="lab">직접 질문 (선택)</div><input type="text" id="qin" maxlength="60" placeholder="예: 이번 달에 이직해도 될까요?">
   <button class="gold go" id="shuffleBtn">설이에게 카드 섞어 달라고 하기</button>
 </div></section>
@@ -171,6 +172,7 @@ MAJ.forEach((m,i)=>DECK.push({id:'M'+i,arc:'major',num:i,sym:m[0],name:m[1],kw:m
 SUITS.forEach(s=>RANKS.forEach((r,i)=>DECK.push({id:s.id+(i+1),arc:'minor',suit:s,num:i+1,sym:s.sym,name:`${s.n} ${r[0]}`,kw:`${s.area} · ${r[1]}`,
   up:`${s.area}에서 ${r[2]}.`,rev:`${s.area}에서 ${r[3]}.`,love:`${s.love} 쪽에서 ${r[2]}.`,money:`${s.money} 쪽에서 ${r[2]}.`,work:`${s.work} 쪽에서 ${r[2]}.`,rel:`${s.rel} 쪽에서 ${r[2]}.`,
   pos:`${r[4]}.`,caution:`${r[5]}.`,advice:`${r[6]}.`})));
+let REV_ON=true;try{REV_ON=localStorage.getItem('seoltarot_rev')!=='0'}catch(e){}
 const ROMAN=['0','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI'];
 
 /* ============ 2. 상담 방식 · 주제 ============ */
@@ -184,7 +186,7 @@ const CATS=[['love','연애운','love'],['again','재회운','love'],['heart','�
 
 /* ============ 3. 추첨 엔진 (중복 없음 · 방향은 확률) ============ */
 function rng(){const a=new Uint32Array(1);(crypto&&crypto.getRandomValues)?crypto.getRandomValues(a):(a[0]=Math.random()*4294967296);return a[0]/4294967296}
-function shuffleDeck(){const d=DECK.map((c,i)=>({i,rev:rng()<0.35}));for(let k=d.length-1;k>0;k--){const j=Math.floor(rng()*(k+1));[d[k],d[j]]=[d[j],d[k]]}return d}
+function shuffleDeck(){const d=DECK.map((c,i)=>({i,rev:REV_ON&&rng()<0.35}));for(let k=d.length-1;k>0;k--){const j=Math.floor(rng()*(k+1));[d[k],d[j]]=[d[j],d[k]]}return d}
 
 /* ============ 4. 해석 (카드 데이터 기반 · 추첨 결과에서 벗어나지 않음) ============ */
 const pickOne=a=>a[Math.floor(rng()*a.length)];
@@ -426,6 +428,8 @@ function makeCard(deckIdx){const g=new THREE.Group();
   const front=new THREE.Mesh(S.cardGeo,new THREE.MeshStandardMaterial({map:faceTex(deckIdx),roughness:.6}));front.rotation.y=Math.PI;front.position.z=-.002;
   const glow=new THREE.Mesh(new THREE.PlaneGeometry(.78,1.16),new THREE.MeshBasicMaterial({color:'#f5d995',transparent:true,opacity:0,depthWrite:false}));glow.position.z=-.004;
   g.add(glow,back,front);g.userData={glow};S.sc.add(g);return g}
+let RIBBON=null;function ribbonTex(){if(RIBBON)return RIBBON;const cv=document.createElement('canvas');cv.width=256;cv.height=72;const g=cv.getContext('2d');g.fillStyle='rgba(150,40,50,.92)';roundRect(g,4,8,248,56,28);g.fill();g.strokeStyle='#f5d995';g.lineWidth=3;roundRect(g,4,8,248,56,28);g.stroke();g.fillStyle='#fff3d6';g.font='bold 34px "Gowun Batang",serif';g.textAlign='center';g.fillText('↻ 역방향',128,48);RIBBON=new THREE.CanvasTexture(cv);return RIBBON}
+function addRibbon(g){const m=new THREE.Mesh(new THREE.PlaneGeometry(.5,.14),new THREE.MeshBasicMaterial({map:ribbonTex(),transparent:true,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.set(g.position.x,g.position.y+.02,g.position.z+.6);S.sc.add(m);(S.ribbons=S.ribbons||[]).push(m)}
 function burst(p){const N=40,pos=new Float32Array(N*3),vel=[];for(let k=0;k<N;k++){pos.set([p.x,p.y,p.z],k*3);vel.push(new THREE.Vector3((rng()-.5)*2.4,rng()*2.2+.4,(rng()-.5)*2.4))}
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
   const pts=new THREE.Points(geo,new THREE.PointsMaterial({color:'#ffd77a',size:.06,transparent:true,opacity:1,depthWrite:false,blending:THREE.AdditiveBlending}));S.sc.add(pts);S.bursts.push({pts,vel,life:1.1})}
@@ -459,15 +463,17 @@ function hint(t){const el=$('#hint');el.style.display=t?'block':'none';el.textCo
 function show(id,on){$(id).classList.toggle('on',on)}
 function paintSetup(){
   $('#modes').innerHTML=MODES.map(m=>`<button class="chip mode" data-m="${m.id}" aria-pressed="${m.id===ST.mode.id}">${m.n}<small>${m.d}</small></button>`).join('');
+  [...document.querySelectorAll('#revs .chip')].forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.r==='1')===REV_ON)));
   $('#cats').innerHTML=CATS.map(c=>`<button class="chip" data-c="${c[0]}" aria-pressed="${c[0]===ST.cat}">${c[1]}</button>`).join('')}
 $('#modes').onclick=e=>{const b=e.target.closest('button');if(b){ST.mode=MODES.find(m=>m.id===b.dataset.m);paintSetup()}};
+$('#revs').onclick=e=>{const b=e.target.closest('button');if(!b)return;REV_ON=b.dataset.r==='1';try{localStorage.setItem('seoltarot_rev',REV_ON?'1':'0')}catch(err){}paintSetup()};
 $('#cats').onclick=e=>{const b=e.target.closest('button');if(b){ST.cat=b.dataset.c;paintSetup()}};
-function clearCards(){ST.spread.forEach(c=>S.sc.remove(c.g));ST.spread=[];ST.picks=[];ST.slots=[];tweens.length=0}
+function clearCards(){(S.ribbons||[]).forEach(m=>S.sc.remove(m));S.ribbons=[];ST.spread.forEach(c=>S.sc.remove(c.g));ST.spread=[];ST.picks=[];ST.slots=[];tweens.length=0}
 function slotPos(k,n){ // 선택한 카드가 놓일 자리
   if(n===10){const cross=[[0,0,0],[0,0,Math.PI/2],[0,.72,0],[-.8,0,0],[0,-.72,0],[.8,0,0]];if(k<6){const [x,z,r]=cross[k];return{px:x-.7,py:.03+k*.004,pz:.95+z*.95,rz:r}}return{px:1.55,py:.03,pz:.95+(-1.1+(k-6)*.72)*.95,rz:0}}
   const gap=n>3?(S.portrait?.66:.74):.9,x0=-(n-1)*gap/2;return{px:x0+k*gap,py:.03,pz:1.05,rz:0}}
 function deal(){
-  clearCards();ST.q=$('#qin').value.trim();show('#setup',false);ST.phase='shuffle';
+  clearCards();ST.revTold=false;ST.q=$('#qin').value.trim();show('#setup',false);ST.phase='shuffle';
   ST.deck=shuffleDeck();const n=S.portrait?17:21;ST.deck.slice(0,n).forEach(d=>loadArt(DECK[d.i]));
   say('킁킁… 카드에 당신의 기운을 섞는 중이에요.');for(let k=0;k<10;k++)rustle(.06,k*.2);hint('설이가 카드를 섞고 있어요');S.master.st.shuffle=2.2;
   for(let k=0;k<n;k++){const d=ST.deck[k],g=makeCard(d.i);g.position.set(0,.06+k*.01,-.9);g.rotation.set(-Math.PI/2,0,0);ST.spread.push({g,d,picked:false});
@@ -502,7 +508,7 @@ function reveal(){
   say('자, 발자국을 따라가 볼까요…');
   ST.picks.forEach((p,k)=>{const g=p.c.g;setTimeout(()=>{
       const rz=g.rotation.z+(p.rev?Math.PI:0);
-      tween(g,{py:.55,ry:Math.PI/2,rz},.32,0,()=>tween(g,{py:.03+k*.004,ry:Math.PI},.32,0,()=>{burst(g.position);chime(PENTA[k%PENTA.length]/2,2.4,.09)}));
+      tween(g,{py:.55,ry:Math.PI/2,rz},.32,0,()=>tween(g,{py:.03+k*.004,ry:Math.PI},.32,0,()=>{burst(g.position);if(p.rev&&ST.mode.count<=5)addRibbon(g);chime(PENTA[k%PENTA.length]/2,2.4,.09)}));
     },600+k*(ST.picks.length>5?380:650))});
   setTimeout(startFocus,600+ST.picks.length*(ST.picks.length>5?380:650)+900);
 }
@@ -518,6 +524,7 @@ function focusNext(){clearTimeout(focusT);if(FK>=0)focusBack(FK);FK++;
   tween(g,{px:at.x,py:at.y-.2,pz:at.z,rx:Math.asin(dir.y),ry:Math.PI,rz:p.rev?Math.PI:0,s:1.9},.55);
   chime(PENTA[(FK+2)%PENTA.length],2,.07);
   $('#fPos').textContent=`${ST.mode.pos[FK]} · ${FK+1}/${ST.picks.length}`;$('#fName').textContent=c.name;$('#fDir').textContent=p.rev?'역방향':'정방향';
+  if(p.rev&&!ST.revTold){ST.revTold=true;say('거꾸로 나온 카드는 역방향이에요. 기운이 막혔거나 조심하라는 뜻이에요.',4.5)}
   $('#fText').textContent=field(c,ST.cat,p.rev);$('#focus').classList.add('on');S.master.st.gest=1;S.master.st.talk=1.5;if(!p.rev&&c.arc==='major')S.master.st.smile=3.2;
   focusT=setTimeout(focusNext,ST.picks.length>5?2600:3800)}
 function skipFocus(){clearTimeout(focusT);if(ST.phase!=='focus')return;ST.phase='reveal';$('#focus').classList.remove('on');$('#skipBtn').style.display='none';if(FK>=0)focusBack(FK);setTimeout(showResult,500)}
