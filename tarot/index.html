@@ -384,13 +384,19 @@ const SILENT='data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAAB
 function unlockIOS(){// 아이폰 무음 스위치·잠금 해제: 소리 세션을 '재생'으로 + 무음 오디오를 한 번 틀어 둠
   try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
   if(!SND.tag){try{SND.tag=new Audio(SILENT);SND.tag.loop=true;SND.tag.setAttribute('playsinline','');SND.tag.play().catch(()=>{})}catch(e){}}else if(SND.tag.paused)SND.tag.play().catch(()=>{})}
-function audio(){unlockIOS();if(!SND.ctx){try{const C=window.AudioContext||window.webkitAudioContext;const c=SND.ctx=new C();SND.m=c.createGain();SND.m.gain.value=SND.on?.8:0;SND.m.connect(c.destination);amb()}catch(e){SND.ctx=null}}
+function audio(){unlockIOS();if(!SND.ctx){try{const C=window.AudioContext||window.webkitAudioContext;const c=SND.ctx=new C();SND.m=c.createGain();SND.m.gain.value=SND.on?.6:0;SND.m.connect(c.destination);amb()}catch(e){SND.ctx=null}}
   if(SND.ctx&&SND.ctx.state==='suspended')SND.ctx.resume();return SND.ctx}
-function amb(){const c=SND.ctx,g=c.createGain(),lp=c.createBiquadFilter();g.gain.value=.07;lp.type='lowpass';lp.frequency.value=1400;g.connect(lp);lp.connect(SND.m);
-  [220,329.63,440,554.37].forEach((f,i)=>{const o=c.createOscillator(),lf=c.createOscillator(),lg=c.createGain();o.type=i%2?'triangle':'sine';o.frequency.value=f;lf.frequency.value=.05+i*.03;lg.gain.value=1.5;lf.connect(lg);lg.connect(o.frequency);o.connect(g);o.start();lf.start()})}
+function amb(){// 바람·방 울림 같은 잔잔한 소리 + 가끔 울리는 싱잉볼(윙윙거리는 떨림 없음)
+  const c=SND.ctx,len=c.sampleRate*4,buf=c.createBuffer(2,len,c.sampleRate);
+  for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);let b0=0,b1=0,b2=0;for(let k=0;k<len;k++){const w=Math.random()*2-1;b0=.99765*b0+w*.099;b1=.963*b1+w*.2965;b2=.57*b2+w*1.0526;d[k]=(b0+b1+b2+w*.1848)*.11}}
+  const src=c.createBufferSource(),lp=c.createBiquadFilter(),g=c.createGain(),lfo=c.createOscillator(),lg=c.createGain();
+  src.buffer=buf;src.loop=true;lp.type='lowpass';lp.frequency.value=650;lp.Q.value=.3;g.gain.value=0;g.gain.linearRampToValueAtTime(.05,c.currentTime+3);
+  lfo.frequency.value=.07;lg.gain.value=.018;lfo.connect(lg);lg.connect(g.gain);src.connect(lp);lp.connect(g);g.connect(SND.m);src.start();lfo.start();
+  [196,293.66].forEach(f=>{const o=c.createOscillator(),og=c.createGain();o.type='sine';o.frequency.value=f;og.gain.value=0;og.gain.linearRampToValueAtTime(.008,c.currentTime+6);o.connect(og);og.connect(SND.m);o.start()});
+  const bowl=()=>{if(SND.on&&document.visibilityState!=='hidden')chime([392,440,523.25][Math.floor(Math.random()*3)],5.5,.035);setTimeout(bowl,9000+Math.random()*6000)};setTimeout(bowl,2500)}
 function chime(f=880,dur=1.4,vol=.16,delay=0){const c=audio();if(!c)return;const t=c.currentTime+delay;[1,2.01,3.02].forEach((m,i)=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f*m;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol/(i+1),t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+dur/(i+1));o.connect(g);g.connect(SND.m);o.start(t);o.stop(t+dur)})}
 function rustle(vol=.12,delay=0){const c=audio();if(!c)return;const t=c.currentTime+delay,n=Math.floor(c.sampleRate*.09),b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);for(let k=0;k<n;k++)d[k]=(Math.random()*2-1)*(1-k/n);
-  const s=c.createBufferSource(),bp=c.createBiquadFilter(),g=c.createGain();s.buffer=b;bp.type='bandpass';bp.frequency.value=2600;bp.Q.value=.8;g.gain.value=vol;s.connect(bp);bp.connect(g);g.connect(SND.m);s.start(t)}
+  const s=c.createBufferSource(),bp=c.createBiquadFilter(),g=c.createGain();s.buffer=b;bp.type='bandpass';bp.frequency.value=1800;bp.Q.value=.6;g.gain.value=vol;s.connect(bp);bp.connect(g);g.connect(SND.m);s.start(t)}
 const PENTA=[523.25,587.33,659.25,783.99,880,1046.5];
 /* ============ 9. 상담 흐름 ============ */
 const ST={mode:MODES[1],cat:'today',q:'',phase:'start',spread:[],picks:[],deck:[],slots:[]};
@@ -411,7 +417,7 @@ function slotPos(k,n){ // 선택한 카드가 놓일 자리
 function deal(){
   clearCards();ST.q=$('#qin').value.trim();show('#setup',false);ST.phase='shuffle';
   ST.deck=shuffleDeck();const n=S.portrait?17:21;
-  say('킁킁… 카드에 당신의 기운을 섞는 중이에요.');for(let k=0;k<14;k++)rustle(.1,k*.15);hint('설이가 카드를 섞고 있어요');S.master.st.shuffle=2.2;
+  say('킁킁… 카드에 당신의 기운을 섞는 중이에요.');for(let k=0;k<10;k++)rustle(.06,k*.2);hint('설이가 카드를 섞고 있어요');S.master.st.shuffle=2.2;
   for(let k=0;k<n;k++){const d=ST.deck[k],g=makeCard(d.i);g.position.set(0,.06+k*.01,-.9);g.rotation.set(-Math.PI/2,0,0);ST.spread.push({g,d,picked:false});
     // 섞기: 좌우로 튀었다가 다시 모임
     const sx=(k%2?1:-1)*(.4+rng()*.5);tween(g,{px:sx,pz:-.9+(rng()-.5)*.3,rz:(rng()-.5)*.6},.35,k*.03);tween(g,{px:0,pz:-.9,rz:0},.35,.45+k*.03);tween(g,{px:sx*.6,rz:(rng()-.5)*.4},.3,1.0+k*.02);tween(g,{px:0,rz:0},.3,1.4+k*.02)}
@@ -427,7 +433,7 @@ function pickAt(cx,cy){
   const hits=S.ray.intersectObjects(ST.spread.filter(c=>!c.picked).map(c=>c.g),true);if(!hits.length)return;
   let o=hits[0].object;while(o.parent&&!ST.spread.find(c=>c.g===o))o=o.parent;const c=ST.spread.find(x=>x.g===o);if(!c)return;
   c.picked=true;const k=ST.picks.length,n=ST.mode.free?5:ST.mode.count;ST.picks.push({i:c.d.i,rev:c.d.rev,c});
-  c.g.userData.glow.material.opacity=.55;chime(PENTA[k%PENTA.length]*2,.6,.07);
+  c.g.userData.glow.material.opacity=.55;chime(PENTA[k%PENTA.length],.9,.05);
   tween(c.g,{py:.7,pz:c.g.position.z+.25},.3,0,()=>{const sp=slotPos(k,ST.mode.free?Math.max(3,n):n);tween(c.g,{px:sp.px,py:sp.py+.25,pz:sp.pz,rx:-Math.PI/2,rz:sp.rz},.5,0,()=>{tween(c.g,{py:sp.py},.2);c.g.userData.glow.material.opacity=.0})});
   if(ST.mode.free){updatePickHint();if(ST.picks.length>=5)reveal();return}
   updatePickHint();if(ST.picks.length>=ST.mode.count)setTimeout(reveal,900);
@@ -438,13 +444,13 @@ function reveal(){
   say('자, 발자국을 따라가 볼까요…');
   ST.picks.forEach((p,k)=>{const g=p.c.g;setTimeout(()=>{
       const rz=g.rotation.z+(p.rev?Math.PI:0);
-      tween(g,{py:.55,ry:Math.PI/2,rz},.32,0,()=>tween(g,{py:.03+k*.004,ry:Math.PI},.32,0,()=>{burst(g.position);chime(PENTA[k%PENTA.length],1.6,.14)}));
+      tween(g,{py:.55,ry:Math.PI/2,rz},.32,0,()=>tween(g,{py:.03+k*.004,ry:Math.PI},.32,0,()=>{burst(g.position);chime(PENTA[k%PENTA.length]/2,2.4,.09)}));
     },600+k*(ST.picks.length>5?380:650))});
   setTimeout(showResult,600+ST.picks.length*(ST.picks.length>5?380:650)+900);
 }
 function cardImg(i){return faceCanvas(DECK[i]).toDataURL('image/png')}
 function showResult(){
-  ST.phase='result';const R=ST.R=interpret(ST);[0,1,2,3].forEach(k=>chime(PENTA[k+1],1.8,.09,k*.12));const cat=CATS.find(c=>c[0]===ST.cat)[1];
+  ST.phase='result';const R=ST.R=interpret(ST);[0,1,2].forEach(k=>chime(PENTA[k]/2,3,.06,k*.25));const cat=CATS.find(c=>c[0]===ST.cat)[1];
   S.master.st.gest=1.2;say(R.lastWord,4);
   $('#resultIn').innerHTML=`<button class="peek" id="peekBtn">탁자 보기</button><h2>${esc(ST.mode.n)} · ${esc(cat)}</h2>
    ${ST.q?`<p class="q">질문: ${esc(ST.q)}</p>`:''}
@@ -527,7 +533,7 @@ $('#topbtn').onclick=openHistory;
 $('#shuffleBtn').onclick=deal;
 $('#readBtn').onclick=()=>{if(ST.picks.length)reveal()};
 $('#startBtn').onclick=()=>{audio();$('#snd').style.display='block';$('#start').hidden=true;openSetup()};
-$('#snd').onclick=()=>{SND.on=!SND.on;audio();if(SND.m)SND.m.gain.value=SND.on?.8:0;$('#snd').textContent=SND.on?'소리 켬':'소리 끔';$('#snd').setAttribute('aria-pressed',SND.on)};
+$('#snd').onclick=()=>{SND.on=!SND.on;audio();if(SND.m)SND.m.gain.value=SND.on?.6:0;$('#snd').textContent=SND.on?'소리 켬':'소리 끔';$('#snd').setAttribute('aria-pressed',SND.on)};
 document.addEventListener('pointerdown',()=>{if(SND.ctx&&SND.on){audio()}},true);
 const cvs=document.getElementById('gl');
 cvs.addEventListener('pointermove',e=>{S.look.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1)});
