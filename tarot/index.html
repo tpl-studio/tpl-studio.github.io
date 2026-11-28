@@ -15,6 +15,7 @@
 :root{color-scheme:dark;--ink:#f3ecdc;--soft:#b8b2c8;--gold:#e2b866;--gold2:#f5d995;--navy:#141a33;--panel:rgba(16,18,38,.9);--line:rgba(226,184,102,.35);--cream:#f4ecdb}
 *{box-sizing:border-box;min-width:0}
 html,body{margin:0;height:100%;background:#07080f;color:var(--ink);font:16px/1.6 "Gowun Dodum",system-ui,sans-serif;overflow:hidden}
+#flash{position:fixed;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen}
 #vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(120% 90% at 50% 45%,transparent 55%,rgba(0,0,0,.55))}
 #gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .serif{font-family:"Gowun Batang",serif}
@@ -89,6 +90,7 @@ input[type=text]{width:100%;font:inherit;font-size:16px;padding:10px 14px;border
 <body>
 <canvas id="gl"></canvas>
 <div id="vig"></div>
+<div id="flash"></div>
 <div id="loading">상담소 불을 켜는 중…</div>
 <div id="hint"></div>
 <div id="say"></div>
@@ -100,6 +102,7 @@ input[type=text]{width:100%;font:inherit;font-size:16px;padding:10px 14px;border
     <h1 class="serif">설이네 타로</h1>
     <p>당신의 운명의 발자국을 따라가 보세요.</p>
     <button class="gold" id="startBtn">시작하기</button>
+    <button class="line" id="dailyBtn" style="width:100%;margin-top:10px;font-size:16px">🌙 오늘의 카드 <span id="streak" class="kw"></span></button>
   </div>
 </section>
 <section class="sheet" id="setup"><div class="wrap">
@@ -107,7 +110,7 @@ input[type=text]{width:100%;font:inherit;font-size:16px;padding:10px 14px;border
   <div class="lab">타로 방식</div><div class="chips" id="modes"></div>
   <div class="lab">상담 주제</div><div class="chips" id="cats"></div>
   <div class="lab">카드 방향</div><div class="chips" id="revs"><button class="chip" data-r="1">역방향 포함 <small>진짜 타로처럼 거꾸로 나올 수 있어요</small></button><button class="chip" data-r="0">정방향만 <small>처음이라면 편해요</small></button></div>
-  <div class="lab">직접 질문 (선택)</div><input type="text" id="qin" maxlength="60" placeholder="예: 이번 달에 이직해도 될까요?">
+  <div class="lab">직접 질문 (선택)</div><input type="text" id="qin" maxlength="60" placeholder="예: 이번 달에 이직해도 될까요?"><div class="chips" id="qsug" style="margin-top:8px"></div>
   <button class="gold go" id="shuffleBtn">설이에게 카드 섞어 달라고 하기</button>
 </div></section>
 <div id="focus"><div class="fp" id="fPos"></div><div class="fn"><span id="fName"></span><span class="dir" id="fDir"></span></div><p id="fText"></p><div class="ft">화면을 누르면 다음 카드</div></div>
@@ -292,6 +295,9 @@ const MODES=[
  {id:'five',n:'파이브 카드',d:'상황 · 장애물 · 조언 · 주변 · 결과',count:5,pos:['현재 상황','장애물','조언','주변 상황','결과']},
  {id:'celtic',n:'켈틱 크로스',d:'열 장 종합 상담',count:10,pos:['현재','가로막는 것','바탕','지나간 일','바라는 것','가까운 미래','나 자신','주변 환경','희망과 두려움','최종 결과']},
  {id:'free',n:'자유 선택',d:'끌리는 만큼 1~5장',count:5,free:true,pos:['첫 번째','두 번째','세 번째','네 번째','다섯 번째']}];
+const QSUG={love:['그 사람도 나를 좋아할까요?','이번 달에 새 인연이 생길까요?','지금 고백해도 될까요?'],again:['그 사람이 다시 연락할까요?','재회할 수 있을까요?','먼저 연락해도 될까요?'],heart:['그 사람은 지금 나를 어떻게 생각할까요?','왜 연락이 뜸해졌을까요?','그 사람 마음에 내가 있을까요?'],
+ money:['이번 달 돈 흐름은 어떨까요?','부수입을 시작해도 될까요?','저축을 늘릴 수 있을까요?'],work:['이직해도 될까요?','이번 면접 잘 될까요?','지금 회사에서 인정받을 수 있을까요?'],biz:['새 사업을 시작해도 될까요?','이번 계획은 잘 될까요?','동업해도 될까요?'],
+ rel:['그 친구와 화해할 수 있을까요?','새 모임에 잘 어울릴 수 있을까요?','가족과 사이가 좋아질까요?'],today:['오늘 나에게 필요한 말은?','오늘 조심할 건 뭘까요?'],future:['3개월 뒤 나는 어떤 모습일까요?','올해 남은 운은 어떨까요?'],all:['요즘 내 운의 흐름은?','지금 가장 신경 써야 할 건?']};
 const CATS=[['love','연애운','love'],['again','재회운','love'],['heart','상대방의 마음','love'],['money','금전운','money'],['work','직장운','work'],['biz','사업운','money'],['rel','인간관계','rel'],['today','오늘의 운세','gen'],['future','미래운','gen'],['all','종합운세','gen']];
 
 /* ============ 3. 추첨 엔진 (중복 없음 · 방향은 확률) ============ */
@@ -564,9 +570,14 @@ function makeCard(deckIdx){const g=new THREE.Group();
   g.add(glow,back,front);g.userData={glow};S.sc.add(g);return g}
 let RIBBON=null;function ribbonTex(){if(RIBBON)return RIBBON;const cv=document.createElement('canvas');cv.width=256;cv.height=72;const g=cv.getContext('2d');g.fillStyle='rgba(150,40,50,.92)';roundRect(g,4,8,248,56,28);g.fill();g.strokeStyle='#f5d995';g.lineWidth=3;roundRect(g,4,8,248,56,28);g.stroke();g.fillStyle='#fff3d6';g.font='bold 34px "Gowun Batang",serif';g.textAlign='center';g.fillText('↻ 역방향',128,48);RIBBON=new THREE.CanvasTexture(cv);return RIBBON}
 function addRibbon(g){const m=new THREE.Mesh(new THREE.PlaneGeometry(.5,.14),new THREE.MeshBasicMaterial({map:ribbonTex(),transparent:true,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.set(g.position.x,g.position.y+.02,g.position.z+.6);S.sc.add(m);(S.ribbons=S.ribbons||[]).push(m)}
-function burst(p){const N=40,pos=new Float32Array(N*3),vel=[];for(let k=0;k<N;k++){pos.set([p.x,p.y,p.z],k*3);vel.push(new THREE.Vector3((rng()-.5)*2.4,rng()*2.2+.4,(rng()-.5)*2.4))}
+// 메이저 카드: 카드마다 다른 연출 [색, 화면 번쩍 색, 입자 수, 퍼짐, 중력]
+const MFX={0:['#ffffff',null,50,2,2],1:['#ffd77a','#fff2c0',70,2.6,2],2:['#9fb8ff',null,50,1.6,1],3:['#a8e07a',null,60,2,2],6:['#ff8fb0','#ffd0dc',90,2.4,1.2],7:['#ffd77a',null,70,3,2.5],10:['#e2b866','#fff2c0',80,3,1],13:['#f4f4f4',null,60,2,1.5],16:['#cfe0ff','#ffffff',90,3.4,3],17:['#bfe0ff','#dfefff',120,2.2,.6],18:['#c8c8ff',null,60,1.4,.5],19:['#ffcf4a','#fff0b0',140,3.2,1.8],20:['#ffd77a','#fff2c0',80,2.6,1.2],21:['#ffd77a','#fff2c0',140,3,1]};
+function flash(col){const el=$('#flash');el.style.background=col;el.style.transition='none';el.style.opacity=.75;requestAnimationFrame(()=>{el.style.transition='opacity .9s ease-out';el.style.opacity=0})}
+function cardFx(c,pos){const f=MFX[c.num];if(c.arc!=='major'||!f)return;burst(pos,f[0],f[2],f[3],f[4]);if(f[1])flash(f[1]);try{navigator.vibrate&&navigator.vibrate(c.num===16?[40,40,80]:30)}catch(e){}
+  if(c.num===16){rustle(.25);chime(55,2.5,.2)}else chime(PENTA[4],3,.08,.1)}
+function burst(p,col='#ffd77a',N=40,spread=2.4,grav=2.5){const pos=new Float32Array(N*3),vel=[];for(let k=0;k<N;k++){pos.set([p.x,p.y,p.z],k*3);vel.push(new THREE.Vector3((rng()-.5)*spread,rng()*2.2+.4,(rng()-.5)*spread))}
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
-  const pts=new THREE.Points(geo,new THREE.PointsMaterial({color:'#ffd77a',size:.06,transparent:true,opacity:1,depthWrite:false,blending:THREE.AdditiveBlending}));S.sc.add(pts);S.bursts.push({pts,vel,life:1.1})}
+  const pts=new THREE.Points(geo,new THREE.PointsMaterial({color:col,size:.06,transparent:true,opacity:1,depthWrite:false,blending:THREE.AdditiveBlending}));S.sc.add(pts);S.bursts.push({pts,vel,life:1.1,grav})}
 
 /* ============ 9-0. 소리 ============ */
 const SND={ctx:null,on:true};
@@ -592,14 +603,21 @@ const PENTA=[523.25,587.33,659.25,783.99,880,1046.5];
 const ST={mode:MODES[1],cat:'today',q:'',phase:'start',spread:[],picks:[],deck:[],slots:[]};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let sayT=0;function say(t,sec=3.2){const el=$('#say');el.textContent=t;el.classList.add('on');sayT=sec;S.master.st.talk=Math.min(2.2,t.length*.07)}
+const VLINES=["멍. 설이네 타로에 오신 걸 환영해요.", "어서 오세요. 무엇이 궁금하신가요?", "킁킁… 카드에 당신의 기운을 섞는 중이에요.", "질문을 떠올리고, 카드를 훑다가 끌리는 곳에서 떼세요. 1장.", "질문을 떠올리고, 카드를 훑다가 끌리는 곳에서 떼세요. 3장.", "질문을 떠올리고, 카드를 훑다가 끌리는 곳에서 떼세요. 5장.", "질문을 떠올리고, 카드를 훑다가 끌리는 곳에서 떼세요. 10장.", "손가락으로 카드를 훑다가 끌리는 곳에서 떼세요. 1~5장.", "자, 발자국을 따라가 볼까요…", "거꾸로 나온 카드는 역방향이에요. 기운이 막혔거나 조심하라는 뜻이에요.", "설이가 꼬리 흔들며 응원할게요.", "멍! 오늘도 잘 해낼 거예요.", "간식처럼 좋은 일이 곧 굴러올 거예요.", "발자국은 당신이 만드는 거예요. 멍.", "킁킁… 좋은 냄새가 나요. 곧 웃을 일이 생길 거예요.", "예스 쪽이에요! 카드들이 고개를 끄덕이고 있어요.", "반반이에요. 당신의 선택이 결과를 정해요.", "지금은 노 쪽이에요. 하지만 흐름은 바뀔 수 있어요.", "오늘의 카드가 도착했어요. 한 장 뒤집어 볼까요?", "출석 도장 꾹! 내일도 와 주세요.", "일주일 개근이에요! 설이 특별 카드를 드릴게요."],VBUF={};let vSrc=null;
+function voice(t){const i=VLINES.indexOf(t);if(i<0||!SND.on)return false;const c=audio();if(!c)return false;const url=`voice/v${String(i).padStart(2,'0')}.mp3`;
+  const play=b=>{try{if(vSrc)vSrc.stop()}catch(e){}const s=c.createBufferSource(),g=c.createGain();g.gain.value=1.25;s.buffer=b;s.connect(g);g.connect(SND.m);s.start();vSrc=s;S.master.st.talk=b.duration};
+  if(VBUF[url]){play(VBUF[url]);return true}
+  fetch(url).then(r=>r.ok?r.arrayBuffer():Promise.reject()).then(a=>c.decodeAudioData(a)).then(b=>{VBUF[url]=b;play(b)}).catch(()=>{});return true}
+let sayT=0;function say(t,sec=3.2){const el=$('#say');el.textContent=t;el.classList.add('on');sayT=Math.max(sec,t.length*.11);S.master.st.talk=Math.min(2.2,t.length*.07);voice(t)}
 function hint(t){const el=$('#hint');el.style.display=t?'block':'none';el.textContent=t||''}
 function show(id,on){$(id).classList.toggle('on',on)}
 function paintSetup(){
   $('#modes').innerHTML=MODES.map(m=>`<button class="chip mode" data-m="${m.id}" aria-pressed="${m.id===ST.mode.id}">${m.n}<small>${m.d}</small></button>`).join('');
+  $('#qsug').innerHTML=(QSUG[ST.cat]||[]).map(q=>`<button class="chip" data-q="${esc(q)}">${esc(q)}</button>`).join('');
   [...document.querySelectorAll('#revs .chip')].forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.r==='1')===REV_ON)));
   $('#cats').innerHTML=CATS.map(c=>`<button class="chip" data-c="${c[0]}" aria-pressed="${c[0]===ST.cat}">${c[1]}</button>`).join('')}
 $('#modes').onclick=e=>{const b=e.target.closest('button');if(b){ST.mode=MODES.find(m=>m.id===b.dataset.m);paintSetup()}};
+$('#qsug').onclick=e=>{const b=e.target.closest('button');if(b){$('#qin').value=b.dataset.q;try{navigator.vibrate&&navigator.vibrate(10)}catch(err){}}};
 $('#revs').onclick=e=>{const b=e.target.closest('button');if(!b)return;REV_ON=b.dataset.r==='1';try{localStorage.setItem('seoltarot_rev',REV_ON?'1':'0')}catch(err){}paintSetup()};
 $('#cats').onclick=e=>{const b=e.target.closest('button');if(b){ST.cat=b.dataset.c;paintSetup()}};
 function clearCards(){(S.ribbons||[]).forEach(m=>S.sc.remove(m));S.ribbons=[];ST.spread.forEach(c=>S.sc.remove(c.g));ST.spread=[];ST.picks=[];ST.slots=[];tweens.length=0}
@@ -619,7 +637,7 @@ function deal(){
   setTimeout(()=>{const span=S.portrait?1.75:2.6;ST.spread.forEach((c,k)=>{const a=(k/(n-1)-.5)*span*.42,R=S.portrait?3.4:4.2;
       tween(c.g,{px:Math.sin(a)*R*.95,py:.04+k*.002,pz:-.1-Math.cos(a)*R+R*.92,rx:-Math.PI/2,ry:0,rz:-a},.55,k*.025)});
     setTimeout(()=>{ST.phase='pick';S.master.st.gest=1.4;const m=ST.mode;
-      say(m.free?'손가락으로 카드를 훑다가 끌리는 곳에서 떼세요. 1~5장.':`질문을 떠올리고, 카드를 훑다가 끌리는 곳에서 떼세요. ${m.count}장.`,4.5);updatePickHint()},700)},2300);
+      say(ST.daily?'오늘의 카드가 도착했어요. 한 장 뒤집어 볼까요?':m.free?'손가락으로 카드를 훑다가 끌리는 곳에서 떼세요. 1~5장.':`질문을 떠올리고, 카드를 훑다가 끌리는 곳에서 떼세요. ${m.count}장.`,4.5);updatePickHint()},700)},2300);
 }
 function updatePickHint(){const m=ST.mode,k=ST.picks.length;hint(m.free?`끌리는 카드 선택 (${k}/5)`:`카드를 골라 주세요 (${k}/${m.count})`);$('#pickbar').style.display=m.free&&k>0&&ST.phase==='pick'?'flex':'none'}
 function cardAt(cx,cy){S.ndc.set(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);S.ray.setFromCamera(S.ndc,S.cam);
@@ -630,6 +648,7 @@ function setHover(c){if(hover===c)return;if(hover&&!hover.picked){hover.lift=0;h
 function pickAt(cx,cy,given){
   if(ST.phase!=='pick')return;const c=given||cardAt(cx,cy);if(!c||c.picked)return;
   try{navigator.vibrate&&navigator.vibrate(25)}catch(e){}hover=null;c.lift=0;c.ly=0;
+  if(ST.daily&&!ST.picks.length){const di=dailyIdx();c.d={i:di,rev:false};c.g.children[2].material.map=faceTex(di);c.g.children[2].material.needsUpdate=true}
   c.picked=true;const k=ST.picks.length,n=ST.mode.free?5:ST.mode.count;ST.picks.push({i:c.d.i,rev:c.d.rev,c});
   c.g.userData.glow.material.opacity=.55;chime(PENTA[k%PENTA.length],.9,.05);
   tween(c.g,{py:.7,pz:c.g.position.z+.25},.3,0,()=>{const sp=slotPos(k,ST.mode.free?Math.max(3,n):n);tween(c.g,{px:sp.px,py:sp.py+.25,pz:sp.pz,rx:-Math.PI/2,rz:sp.rz},.5,0,()=>{tween(c.g,{py:sp.py},.2);c.g.userData.glow.material.opacity=.0})});
@@ -642,7 +661,7 @@ function reveal(){
   say('자, 발자국을 따라가 볼까요…');
   ST.picks.forEach((p,k)=>{const g=p.c.g;setTimeout(()=>{
       const rz=g.rotation.z+(p.rev?Math.PI:0);
-      tween(g,{py:.55,ry:Math.PI/2,rz},.32,0,()=>tween(g,{py:.03+k*.004,ry:Math.PI},.32,0,()=>{burst(g.position);if(p.rev&&ST.mode.count<=5)addRibbon(g);chime(PENTA[k%PENTA.length]/2,2.4,.09)}));
+      tween(g,{py:.55,ry:Math.PI/2,rz},.32,0,()=>tween(g,{py:.03+k*.004,ry:Math.PI},.32,0,()=>{burst(g.position);cardFx(DECK[p.i],g.position);if(p.rev&&ST.mode.count<=5)addRibbon(g);chime(PENTA[k%PENTA.length]/2,2.4,.09)}));
     },600+k*(ST.picks.length>5?380:650))});
   setTimeout(startFocus,600+ST.picks.length*(ST.picks.length>5?380:650)+900);
 }
@@ -664,8 +683,8 @@ function focusNext(){clearTimeout(focusT);if(FK>=0)focusBack(FK);FK++;
 function skipFocus(){clearTimeout(focusT);if(ST.phase!=='focus')return;ST.phase='reveal';$('#focus').classList.remove('on');$('#skipBtn').style.display='none';if(FK>=0)focusBack(FK);setTimeout(showResult,500)}
 function cardImg(i){return faceCanvas(DECK[i]).toDataURL('image/png')}
 function showResult(){
-  ST.phase='result';const R=ST.R=interpret(ST);S.master.st.smile=2.6;[0,1,2].forEach(k=>chime(PENTA[k]/2,3,.06,k*.25));const cat=CATS.find(c=>c[0]===ST.cat)[1];
-  S.master.st.gest=1.2;say(R.lastWord,4);
+  ST.phase='result';const R=ST.R=interpret(ST);if(ST.daily){setTimeout(()=>say(ST.streak>=7&&ST.streak%7===0?'일주일 개근이에요! 설이 특별 카드를 드릴게요.':'출석 도장 꾹! 내일도 와 주세요.',4),9500)}S.master.st.smile=2.6;[0,1,2].forEach(k=>chime(PENTA[k]/2,3,.06,k*.25));const cat=CATS.find(c=>c[0]===ST.cat)[1];
+  S.master.st.gest=1.2;if(R.pred){say(['예스 쪽이에요! 카드들이 고개를 끄덕이고 있어요.','반반이에요. 당신의 선택이 결과를 정해요.','지금은 노 쪽이에요. 하지만 흐름은 바뀔 수 있어요.'][R.pred.verdict[0]==='🟢'?0:R.pred.verdict[0]==='🟡'?1:2],4);setTimeout(()=>{if(ST.R===R)say(R.lastWord,4)},4600)}else say(R.lastWord,4);
   $('#resultIn').innerHTML=`<button class="peek" id="peekBtn">탁자 보기</button><h2>${esc(ST.mode.n)} · ${esc(cat)}</h2>
    ${ST.q?`<p class="q">질문: ${esc(ST.q)}</p>`:''}
    ${R.notice?`<div class="sum" style="border-color:#e58a8a"><p style="margin:0">${esc(R.notice)}</p></div>`:''}
@@ -743,7 +762,15 @@ async function resultImage(R,cat){
   g.fillStyle='#8f88a6';g.font='24px "Gowun Dodum",sans-serif';g.fillText('재미로 보는 타로 · 설이네 스튜디오',W/2,H-70);
   return new Promise(r=>c.toBlob(r,'image/png'));
 }
-function openSetup(){ST.phase='setup';hint('');paintSetup();show('#setup',true);$('#topbtn').style.display='block';say('어서 오세요. 무엇이 궁금하신가요?')}
+function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function stamps(){try{return JSON.parse(localStorage.getItem('seoltarot_days')||'[]')}catch(e){return[]}}
+function streakOf(ds){let n=0;const d=new Date();for(;;){const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;if(!ds.includes(k))break;n++;d.setDate(d.getDate()-1)}return n}
+function paintStreak(){const n=streakOf(stamps());$('#streak').textContent=n?`· 출석 ${n}일째`:''}
+function dailyIdx(){let id=null;try{id=localStorage.getItem('seoltarot_uid');if(!id){id=String(Math.floor(rng()*1e9));localStorage.setItem('seoltarot_uid',id)}}catch(e){id='0'}
+  let h=2166136261;for(const ch of today()+id){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return (h>>>0)%78}
+function startDaily(){ST.daily=true;ST.mode=MODES[0];ST.cat='today';$('#qin').value='';const ds=stamps();if(!ds.includes(today())){ds.push(today());try{localStorage.setItem('seoltarot_days',JSON.stringify(ds.slice(-60)))}catch(e){}}
+  ST.streak=streakOf(ds);deal()}
+function openSetup(){ST.daily=false;ST.phase='setup';hint('');paintSetup();show('#setup',true);$('#topbtn').style.display='block';say('어서 오세요. 무엇이 궁금하신가요?')}
 function openHistory(){let h=[];try{h=JSON.parse(localStorage.getItem('seoltarot')||'[]')}catch(e){}
   $('#histIn').innerHTML=`<h2>상담 기록</h2>${h.length?h.map(r=>`<div class="hist"><div class="pos">${new Date(r.at).toLocaleString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})} · ${esc(r.mode)} · ${esc(r.cat)}</div><div>${esc(r.cards.join(', '))}</div>${r.q?`<div class="kw">질문: ${esc(r.q)}</div>`:''}<div class="kw">조언: ${esc(r.advice)}</div></div>`).join(''):'<p class="kw">아직 기록이 없어요. 이 브라우저에만 저장돼요.</p>'}
    <div class="row"><button class="gold" id="histClose">닫기</button></div>`;
@@ -752,6 +779,7 @@ $('#topbtn').onclick=openHistory;
 $('#shuffleBtn').onclick=deal;
 $('#skipBtn').onclick=skipFocus;
 $('#readBtn').onclick=()=>{if(ST.picks.length)reveal()};
+$('#dailyBtn').onclick=()=>{S.introGo=true;audio();$('#snd').style.display='block';$('#topbtn').style.display='block';$('#start').hidden=true;startDaily()};
 $('#startBtn').onclick=()=>{S.introGo=true;audio();$('#snd').style.display='block';$('#start').hidden=true;openSetup()};
 $('#snd').onclick=()=>{SND.on=!SND.on;audio();if(SND.m)SND.m.gain.value=SND.on?.6:0;$('#snd').textContent=SND.on?'소리 켬':'소리 끔';$('#snd').setAttribute('aria-pressed',SND.on)};
 document.addEventListener('pointerdown',()=>{if(SND.ctx&&SND.on){audio()}},true);
@@ -774,7 +802,7 @@ function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
   S.ballLight.intensity=.5+Math.sin(T*1.5)*.2;S.ball.rotation.y+=dt*.2;S.circ.rotation.z+=dt*.03;
   S.dust.rotation.y+=dt*.01;S.dust.position.y=Math.sin(T*.3)*.1;
   for(let k=S.bursts.length-1;k>=0;k--){const b=S.bursts[k];b.life-=dt;const a=b.pts.geometry.attributes.position;
-    for(let j=0;j<b.vel.length;j++){b.vel[j].y-=dt*2.5;a.array[j*3]+=b.vel[j].x*dt;a.array[j*3+1]+=b.vel[j].y*dt;a.array[j*3+2]+=b.vel[j].z*dt}
+    for(let j=0;j<b.vel.length;j++){b.vel[j].y-=dt*(b.grav??2.5);a.array[j*3]+=b.vel[j].x*dt;a.array[j*3+1]+=b.vel[j].y*dt;a.array[j*3+2]+=b.vel[j].z*dt}
     a.needsUpdate=true;b.pts.material.opacity=Math.max(0,b.life);if(b.life<=0){S.sc.remove(b.pts);S.bursts.splice(k,1)}}
   // 선택 대기 카드: 살짝 떠오르는 숨쉬기
   if(ST.phase==='pick')ST.spread.forEach((c,k)=>{if(!c.picked&&!tweens.some(w=>w.o===c.g)){c.ly=(c.ly||0)+((c.lift||0)-(c.ly||0))*.25;if(c.base===undefined)c.base=c.g.position.z;
@@ -785,7 +813,7 @@ function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
 function boot(){
   if(!window.THREE){$('#loading').textContent='3D를 불러오지 못했어요. 새로고침해 주세요.';return}
   try{initScene()}catch(e){$('#loading').textContent='이 기기에서는 3D를 켤 수 없어요.';return}
-  $('#loading').remove();$('#start').hidden=false;requestAnimationFrame(loop);setTimeout(()=>say('멍. 설이네 타로에 오신 걸 환영해요.'),600)}
+  $('#loading').remove();$('#start').hidden=false;paintStreak();requestAnimationFrame(loop);setTimeout(()=>say('멍. 설이네 타로에 오신 걸 환영해요.'),600)}
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(boot,boot);else boot();
 }
 </script>
