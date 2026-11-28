@@ -726,7 +726,7 @@ function showResult(){
    <div class="row wrap2"><button class="line" id="aiBtn" hidden>설이에게 자세히 묻기</button><button class="line" id="voiceBtn" hidden>설이 목소리로 듣기</button><button class="line" id="imgBtn" hidden>결과 이미지 저장</button></div>
    <div class="row"><button class="gold" id="againBtn">다시 타로 보기</button><button class="line" id="copyBtn">결과 복사</button></div>
    <div class="row"><button class="gold" id="shareBtn" hidden>📤 친구에게 공유 · 스토리 올리기</button></div>
-   <p class="fine">재미와 자기 성찰을 위한 타로예요. 미래를 확정하지 않으며, 건강·돈·법 문제는 전문가와 상의하세요.</p>`;
+   <p class="fine">재미와 자기 성찰을 위한 타로예요. 미래를 확정하지 않으며, 건강·돈·법 문제는 전문가와 상의하세요.<br><a href="terms.html" style="color:var(--soft)">이용약관</a> · <a href="privacy.html" style="color:var(--soft)">개인정보 처리방침</a> · <a href="refund.html" style="color:var(--soft)">환불 규정</a></p>`;
   show('#result',true);$('#result').classList.remove('min');
   $('#peekBtn').onclick=()=>{const m=$('#result').classList.toggle('min');$('#peekBtn').textContent=m?'해석 보기':'탁자 보기';$('#result').scrollTop=0};
   const rec={at:Date.now(),mode:ST.mode.n,cat,q:ST.q,cards:R.items.map(x=>x.name+(x.rev?'(역)':'')),sum:R.summary,advice:R.advice};
