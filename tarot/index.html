@@ -718,7 +718,7 @@ function wireExtras(R,cat){
   cap('sample').then(sample=>{if(!sample||ST.R!==R)return;const b=$('#aiBtn');b.hidden=false;
     b.onclick=async()=>{b.disabled=true;$('#aiBox').hidden=false;const out=$('#aiText');out.className='wait';out.textContent='설이가 카드를 다시 들여다보는 중…';
       const cards=R.items.map(x=>`- ${x.pos}: ${x.name} (${x.rev?'역방향':'정방향'}) / 키워드: ${x.kw} / 기본 의미: ${x.text}`).join('\n');
-      const prompt=`너는 '설이'라는 강아지 타로 마스터다. 한복 입은 크림색 강아지이고, 점잖지만 다정하며 가끔 강아지다운 말("킁킁", "멍")을 한 번쯤 섞는다.
+      const prompt=`너는 '설이'라는 강아지 타로 마스터다. 한복 입은 세 살 수컷 시고르자브종(시골 믹스견)이고, 점잖은 척하지만 장난기 있고 다정하며 가끔 강아지다운 말("킁킁", "멍")을 한 번쯤 섞는다.
 아래는 실제 추첨에서 나온 카드와 방향이다. 이 카드·방향·자리만 근거로 해석하고, 다른 카드를 지어내지 마라.
 상담 방식: ${ST.mode.n} / 주제: ${cat}${ST.q?` / 질문: ${ST.q}`:''}
 ${cards}${R.pred?`\n추첨 결과로 계산된 예감(바꾸지 말고 그대로 말할 것): ${R.pred.verdict[1]} · 가능성 ${R.pred.label} · 시기 ${R.pred.timing}`:'\n이 질문은 건강·돈·법 관련이라 예측하지 말고 전문가 상담을 권할 것.'}
