@@ -86,6 +86,26 @@ input[type=text]{width:100%;font:inherit;font-size:16px;padding:10px 14px;border
 .ym{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;margin-top:8px;font-size:14px}.ym b{color:var(--gold2);font-weight:400}
 #guide{position:fixed;inset:0;background:rgba(5,6,14,.72);display:grid;place-items:center;padding:20px;z-index:5}#guide[hidden]{display:none}
 .gbox{max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px 18px 14px}.gbox p{margin:8px 0}
+.keybox{background:var(--cream);color:#2a2238;border-radius:18px;padding:14px 16px;margin-bottom:12px}.keybox b.serif{font-size:18px}
+.kr{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;margin-top:8px;align-items:start}.kr span{background:#2a2238;color:var(--gold2);border-radius:8px;font-size:13px;text-align:center;padding:2px 0}.kr p{margin:0;font-size:16px;line-height:1.5}
+.menu{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 12px}
+.menu button{background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:13px;padding:6px 2px;line-height:1.25;min-height:58px}.menu button b{display:block;font-size:22px;font-weight:400}
+.menu button .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#e85d6a;margin-left:3px;vertical-align:2px}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin:8px 0 10px}.tabs button{flex:none;background:rgba(255,255,255,.05);border:1px solid var(--line);padding:0 12px;font-size:14px;min-height:38px}.tabs button[aria-pressed=true]{background:var(--gold);color:#2a1f08}
+.bar2{height:10px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden;margin:6px 0 2px}.bar2 i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2))}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}
+.cell{position:relative;padding:0;background:none;border-radius:8px;aspect-ratio:576/928;overflow:hidden;border:1px solid var(--line);min-height:0}
+.cell img{width:100%;height:100%;object-fit:cover;display:block}.cell.lock img{filter:grayscale(1) brightness(.35)}
+.cell .q{position:absolute;inset:0;display:grid;place-items:center;font-size:22px;color:var(--soft)}.cell .n{position:absolute;right:3px;top:2px;font-size:11px;background:rgba(0,0,0,.6);border-radius:6px;padding:0 4px}
+#cardView{position:fixed;inset:0;background:rgba(5,6,14,.85);display:grid;place-items:center;padding:16px;z-index:6}#cardView[hidden]{display:none}
+.cvb{max-width:380px;width:100%;max-height:92vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:14px}.cvb img{width:62%;display:block;margin:0 auto 10px;border-radius:12px;border:2px solid var(--gold)}
+#toast2{position:fixed;left:50%;top:calc(104px + env(safe-area-inset-top));transform:translate(-50%,-10px);background:linear-gradient(180deg,var(--gold2),var(--gold));color:#2a1f08;border-radius:999px;padding:8px 16px;font-size:15px;opacity:0;pointer-events:none;transition:opacity .35s,transform .35s;z-index:7;white-space:nowrap}
+#toast2.on{opacity:1;transform:translate(-50%,0)}
+#bone{position:fixed;left:0;top:0;font-size:40px;pointer-events:none;opacity:0;z-index:7;transition:transform .9s cubic-bezier(.3,.7,.3,1),opacity .2s}
+.hearts{font-size:22px;letter-spacing:2px;color:#f07a8a}.unl{display:grid;gap:6px;margin-top:8px}.unl div{display:flex;justify-content:space-between;font-size:14px;color:var(--soft);border-bottom:1px solid rgba(255,255,255,.06);padding:4px 0}.unl .ok{color:var(--gold2)}
+.opt{display:flex;flex-wrap:wrap;gap:8px}.sw2{min-width:86px;padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:14px;line-height:1.3}.sw2[aria-pressed=true]{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset}.sw2:disabled{opacity:.45}
+.sw2 i{display:block;width:26px;height:26px;border-radius:50%;margin:0 auto 4px;border:2px solid rgba(255,255,255,.3)}.sw2 small{display:block;font-size:11px;color:var(--soft)}
+#charmCv{width:100%;max-width:300px;display:block;margin:6px auto;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 @keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
 @media(prefers-reduced-motion:reduce){.sheet.on{animation:none}#say{transition:none}}
 </style>
@@ -108,10 +128,12 @@ input[type=text]{width:100%;font:inherit;font-size:16px;padding:10px 14px;border
     <h1 class="serif">설이네 타로</h1>
     <p>당신의 운명의 발자국을 따라가 보세요.</p>
     <button class="gold" id="startBtn">시작하기</button>
+    <div class="menu" id="menuStart"></div>
     <button class="line" id="dailyBtn" style="width:100%;margin-top:10px;font-size:16px">🌙 오늘의 카드 <span id="streak" class="kw"></span></button>
   </div>
 </section>
 <section class="sheet" id="setup"><div class="wrap">
+  <div class="menu" id="menuSetup"></div>
   <h2>무엇이 궁금하신가요?</h2>
   <div class="lab">타로 방식</div><div class="chips" id="modes"></div>
   <div class="lab">상담 주제</div><div class="chips" id="cats"></div>
@@ -123,6 +145,13 @@ input[type=text]{width:100%;font:inherit;font-size:16px;padding:10px 14px;border
 <button id="skipBtn">바로 결과 보기</button>
 <div id="pickbar"><button class="gold" id="readBtn">해석 보기</button></div>
 <section class="sheet" id="result"><div class="wrap" id="resultIn"></div></section>
+<section class="sheet" id="dex"><div class="wrap" id="dexIn"></div></section>
+<section class="sheet" id="play"><div class="wrap" id="playIn"></div></section>
+<section class="sheet" id="deco"><div class="wrap" id="decoIn"></div></section>
+<section class="sheet" id="charm"><div class="wrap" id="charmIn"></div></section>
+<div id="cardView" hidden><div class="cvb"><img id="cvImg" alt=""><div id="cvTxt"></div><button class="gold go" id="cvClose">닫기</button></div></div>
+<div id="toast2"></div>
+<div id="bone">🦴</div>
 <section class="sheet" id="history"><div class="wrap" id="histIn"></div></section>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
@@ -371,7 +400,17 @@ function interpret(st){
   const lastWord=pickOne(['설이가 꼬리 흔들며 응원할게요.','멍! 오늘도 잘 해낼 거예요.','간식처럼 좋은 일이 곧 굴러올 거예요.','발자국은 당신이 만드는 거예요. 멍.','킁킁… 좋은 냄새가 나요. 곧 웃을 일이 생길 거예요.']);
   if(year)combo.unshift(`2027년에 가장 빛나는 달은 ${year.best.m}월(${year.best.c.name})이고, 조심할 달은 ${year.worst.m}월(${year.worst.c.name})이에요.`);
   if(match)combo.unshift(`두 사람 궁합은 ${match.score}점! ${match.score>=85?'설이가 꼬리를 세차게 흔드는 궁합이에요.':match.score>=65?'서로 맞춰 가면 점점 좋아지는 궁합이에요.':'다른 점이 많지만 그래서 배울 게 많은 궁합이에요.'}`);
-  return {items,summary,combo:combo.join(' '),flow,caution,advice:adv,lastWord,pred,notice,year,match};
+  const keyCard=(cards.map((x,k)=>({x,k})).reverse().find(o=>FUT.test(st.mode.pos[o.k]))||{x:lastC,k:cards.length-1});
+  const kp=st.mode.pos[keyCard.k],kc=keyCard.x;
+  let conclusion;
+  if(match)conclusion=`두 사람 궁합은 ${match.score}점, ${match.score>=85?'아주 잘 맞아요':match.score>=65?'맞춰 갈수록 좋아져요':'노력이 필요한 사이예요'}.`;
+  else if(year)conclusion=`2027년은 ${year.best.m}월이 가장 빛나고, ${year.worst.m}월은 조심하는 해예요.`;
+  else if(pred)conclusion=`${pred.verdict[1]}. 흐름이 움직이는 때는 「${pred.timing}」이에요.`;
+  else conclusion=`${josa(kc.c.name,'이','가')} ${kc.rev?'거꾸로':'바로'} 섰어요. ${kc.rev?'지금은 속도를 늦출 때예요.':'흐름은 당신 편이에요.'}`;
+  const why=year?`가장 좋은 달에 ${year.best.c.name} 카드가 나왔기 때문이에요. ${(year.best.c.up||'').split('.')[0]}.`:
+    `「${kp}」 자리의 ${kc.c.name}${kc.rev?'(역방향)':''} 카드가 핵심이에요. ${(kc.rev?kc.c.rev:kc.c.up).split('.')[0]}.`;
+  const key={conclusion,why,todo:adv};
+  return {items,summary,combo:combo.join(' '),flow,caution,advice:adv,lastWord,pred,notice,year,match,key};
 }
 
 /* ============ 5. 카드 그림 (DOG TAROT 독자 디자인) ============ */
@@ -572,7 +611,21 @@ function buildPhotoMaster(){
     pivot.rotation.z+=(rz-pivot.rotation.z)*.12;pivot.position.y+=bob;
     halo.material.opacity=.12+Math.sin(t*1.2)*.04;
   }
-  return {root,st,update};
+  // 한복 색 바꾸기: 남색 부분만 색을 돌려 새 그림을 만듦(사진 그대로, 옷 색만)
+  const recolor=(tex,hue,sat,lift)=>new Promise(res=>{const done=()=>{const im=tex.image,cv=document.createElement('canvas');cv.width=im.width;cv.height=im.height;const g=cv.getContext('2d');g.drawImage(im,0,0);
+      const d=g.getImageData(0,0,cv.width,cv.height),a=d.data;for(let i=0;i<a.length;i+=4){if(a[i+3]<8)continue;const r=a[i]/255,gg=a[i+1]/255,b=a[i+2]/255,mx=Math.max(r,gg,b),mn=Math.min(r,gg,b),v=mx,sv=mx?(mx-mn)/mx:0;
+        if(!(b>r&&b>=gg&&sv>.22&&v<.8))continue;const nv=Math.min(1,v*lift),ns=Math.min(1,sv*sat),h=hue/60,c=nv*ns,x=c*(1-Math.abs(h%2-1)),m=nv-c;
+        let rr=0,g2=0,bb=0;if(h<1){rr=c;g2=x}else if(h<2){rr=x;g2=c}else if(h<3){g2=c;bb=x}else if(h<4){g2=x;bb=c}else if(h<5){rr=x;bb=c}else{rr=c;bb=x}
+        a[i]=(rr+m)*255;a[i+1]=(g2+m)*255;a[i+2]=(bb+m)*255}g.putImageData(d,0,0);const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;res(t)};
+    tex.image&&tex.image.width?done():(tex.onUpdate=null,setTimeout(()=>recolor(tex,hue,sat,lift).then(res),300))});
+  const HANBOK={navy:null,red:[354,1.25,1.7],green:[152,.9,1.45],purple:[282,1,1.5],gold:[40,1.2,2.2]};const cache={};
+  let orig=null;
+  async function hanbok(k){if(!orig)orig={body:tb,base:faces.base,blink:faces.blink,talk:faces.talk,smile:faces.smile};
+    let set=orig;if(HANBOK[k]){if(!cache[k]){const [h,sa,li]=HANBOK[k],out={};for(const [n,t] of Object.entries(orig))if(t)out[n]=await recolor(t,h,sa,li);cache[k]=out}set=cache[k]}
+    bodyM.material.map=set.body;bodyM.material.needsUpdate=true;['base','blink','talk','smile'].forEach(n=>{if(set[n])faces[n]=set[n]});cur=''}
+  let hop=0;function pet(){st.smile=1.8;hop=1;st.tilt=0}
+  const _up=update;function update2(t,dt){_up(t,dt);if(hop>0){hop=Math.max(0,hop-dt*2.4);root.position.y=-.04+Math.sin((1-hop)*Math.PI)*.18}}
+  return {root,st,update:update2,meshes:[bodyM,headM],head:headM,hanbok,pet};
 }
 /* ============ 8. 카드 오브젝트 · 움직임 ============ */
 const tweens=[];
@@ -708,12 +761,16 @@ function focusNext(){clearTimeout(focusT);if(FK>=0)focusBack(FK);FK++;
 function skipFocus(){clearTimeout(focusT);if(ST.phase!=='focus')return;ST.phase='reveal';$('#focus').classList.remove('on');$('#skipBtn').style.display='none';if(FK>=0)focusBack(FK);setTimeout(showResult,500)}
 function cardImg(i){return faceCanvas(DECK[i]).toDataURL('image/png')}
 function showResult(){
-  ST.phase='result';const R=ST.R=interpret(ST);if(ST.daily){setTimeout(()=>say(ST.streak>=7&&ST.streak%7===0?'일주일 개근이에요! 설이 특별 카드를 드릴게요.':'출석 도장 꾹! 내일도 와 주세요.',4),9500)}S.master.st.smile=2.6;[0,1,2].forEach(k=>chime(PENTA[k]/2,3,.06,k*.25));const cat=CATS.find(c=>c[0]===ST.cat)[1];
+  ST.phase='result';const R=ST.R=interpret(ST);collect(ST.picks.map(p=>DECK[p.i].id));if(ST.daily){setTimeout(()=>say(ST.streak>=7&&ST.streak%7===0?'일주일 개근이에요! 설이 특별 카드를 드릴게요.':'출석 도장 꾹! 내일도 와 주세요.',4),9500)}S.master.st.smile=2.6;[0,1,2].forEach(k=>chime(PENTA[k]/2,3,.06,k*.25));const cat=CATS.find(c=>c[0]===ST.cat)[1];
   S.master.st.gest=1.2;if(R.pred){say(['예스 쪽이에요! 카드들이 고개를 끄덕이고 있어요.','반반이에요. 당신의 선택이 결과를 정해요.','지금은 노 쪽이에요. 하지만 흐름은 바뀔 수 있어요.'][R.pred.verdict[0]==='🟢'?0:R.pred.verdict[0]==='🟡'?1:2],4);setTimeout(()=>{if(ST.R===R)say(R.lastWord,4)},4600)}else say(R.lastWord,4);
   $('#resultIn').innerHTML=`<button class="peek" id="peekBtn">탁자 보기</button><h2>${esc(ST.mode.n)} · ${esc(cat)}</h2>
    ${ST.q?`<p class="q">질문: ${esc(ST.q)}</p>`:''}
    ${R.notice?`<div class="sum" style="border-color:#e58a8a"><p style="margin:0">${esc(R.notice)}</p></div>`:''}
-   <div class="sum"><b class="serif" style="color:var(--gold2)">전체 운세</b><p style="margin:4px 0 0">${esc(R.summary)}</p></div>
+   <div class="keybox"><b class="serif">📌 핵심 요약</b>
+     <div class="kr"><span>결론</span><p>${esc(R.key.conclusion)}</p></div>
+     <div class="kr"><span>이유</span><p>${esc(R.key.why)}</p></div>
+     <div class="kr"><span>할 일</span><p>${esc(R.key.todo)}</p></div></div>
+   <div class="sum"><b class="serif" style="color:var(--gold2)">설이의 해설</b><p style="margin:4px 0 0">${esc(R.summary)}</p></div>
    ${R.pred?`<div class="pred"><b class="serif">🔮 설이의 예감</b><div class="pv">${R.pred.verdict[0]} <strong>${esc(R.pred.verdict[1])}</strong></div><p>${esc(R.pred.verdict[2])}</p>
      <div class="gauge" aria-label="가능성 ${R.pred.level}/5">${[1,2,3,4,5].map(n=>`<i class="${n<=R.pred.level?'on':''}"></i>`).join('')}<span>가능성 ${esc(R.pred.label)}</span></div>
      <p class="kw">⏳ 흐름이 움직이는 시기: <b>${esc(R.pred.timing)}</b></p><p class="kw">재미로 보는 예감이에요. 결과를 보장하지 않아요.</p></div>`:''}
@@ -741,7 +798,7 @@ function showResult(){
     try{const blob=await resultImage(R,cat),f=new File([blob],'seol-tarot.png',{type:'image/png'});
       if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f],text:text+' '+url});else await navigator.share({title:'설이네 타로',text,url})}catch(e){}}}
   $('#againBtn').onclick=()=>{show('#result',false);clearCards();openSetup()};
-  $('#copyBtn').onclick=async e=>{const t=`[설이네 타로] ${ST.mode.n} · ${cat}${ST.q?'\n질문: '+ST.q:''}\n${R.items.map(x=>`${x.pos}: ${x.name}(${x.rev?'역':'정'}) - ${x.text}`).join('\n')}${R.pred?`\n설이의 예감: ${R.pred.verdict[1]} · 가능성 ${R.pred.label} · 시기 ${R.pred.timing}`:''}\n조언: ${R.advice}\n설이: ${R.lastWord}`;
+  $('#copyBtn').onclick=async e=>{const t=`[설이네 타로] ${ST.mode.n} · ${cat}${ST.q?'\n질문: '+ST.q:''}\n📌 ${R.key.conclusion}\n이유: ${R.key.why}\n할 일: ${R.key.todo}\n\n${R.items.map(x=>`${x.pos}: ${x.name}(${x.rev?'역':'정'}) - ${x.text}`).join('\n')}${R.pred?`\n설이의 예감: ${R.pred.verdict[1]} · 가능성 ${R.pred.label} · 시기 ${R.pred.timing}`:''}\n조언: ${R.advice}\n설이: ${R.lastWord}`;
     try{await navigator.clipboard.writeText(t);e.target.textContent='복사했어요'}catch(err){e.target.textContent='복사가 막혀 있어요'}};
 }
 /* ============ 9-1. AI 상담 · 목소리 · 이미지 (쓸 수 있을 때만 버튼이 보임) ============ */
@@ -797,7 +854,7 @@ async function resultImage(R,cat){
     g.fillStyle='#e2b866';g.font=`${n>5?20:24}px "Gowun Dodum",sans-serif`;g.fillText(`${it.pos}${it.rev?' · 역':''}`,x,y+chh+34)});
   let y=y0+rows*(chh+70)+40;g.textAlign='left';
   const block=(title,txt,lines)=>{g.fillStyle='#e2b866';g.font='bold 34px "Gowun Batang",serif';g.fillText(title,90,y);y+=50;g.fillStyle='#f4ecdb';g.font='32px "Gowun Dodum",sans-serif';y=wrapText(g,txt,90,y,W-180,46,lines)+18};
-  if(R.match)block('💑 궁합',`${R.match.score}점 · ${R.match.pair}`,1);if(R.year)block('🎍 2027 가장 빛나는 달',`${R.year.best.m}월 ${R.year.best.c.name} · 조심할 달 ${R.year.worst.m}월`,1);block('전체 운세',R.summary,5);if(R.pred)block('🔮 설이의 예감',`${R.pred.verdict[1]} · 가능성 ${R.pred.label} · ${R.pred.timing}`,2);block('카드의 조합',R.combo,3);block('설이의 조언',R.advice,2);
+  if(R.match)block('💑 궁합',`${R.match.score}점 · ${R.match.pair}`,1);if(R.year)block('🎍 2027 가장 빛나는 달',`${R.year.best.m}월 ${R.year.best.c.name} · 조심할 달 ${R.year.worst.m}월`,1);block('📌 핵심 요약',R.key.conclusion+' '+R.key.todo,3);if(R.pred)block('🔮 설이의 예감',`${R.pred.verdict[1]} · 가능성 ${R.pred.label} · ${R.pred.timing}`,2);block('카드의 조합',R.combo,3);block('설이의 조언',R.advice,2);
   const face=await loadImg(SEOL_HEAD);if(face){const s=300;g.save();g.beginPath();g.arc(W/2,H-330,s/2,0,7);g.fillStyle='#f4ecdb';g.fill();g.clip();g.drawImage(face,W/2-s*.62,H-330-s*.42,s*1.24,s*1.24*face.height/face.width);g.restore();g.strokeStyle='#e2b866';g.lineWidth=5;g.beginPath();g.arc(W/2,H-330,s/2,0,7);g.stroke()}
   g.textAlign='center';g.fillStyle='#f4ecdb';g.font='34px "Gowun Batang",serif';wrapText(g,R.lastWord,W/2,H-140,W-200,44,2);
   g.fillStyle='#e2b866';g.font='bold 30px "Gowun Dodum",sans-serif';g.fillText('나도 해보기 👉 tpl-studio.github.io/tarot',W/2,H-82);g.fillStyle='#8f88a6';g.font='22px "Gowun Dodum",sans-serif';g.fillText('재미로 보는 타로 · 설이네 스튜디오',W/2,H-48);
@@ -809,8 +866,109 @@ function streakOf(ds){let n=0;const d=new Date();for(;;){const k=`${d.getFullYea
 function paintStreak(){const n=streakOf(stamps());$('#streak').textContent=n?`· 출석 ${n}일째`:''}
 function dailyIdx(){let id=null;try{id=localStorage.getItem('seoltarot_uid');if(!id){id=String(Math.floor(rng()*1e9));localStorage.setItem('seoltarot_uid',id)}}catch(e){id='0'}
   let h=2166136261;for(const ch of today()+id){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return (h>>>0)%78}
-function startDaily(){ST.daily=true;ST.mode=MODES[0];ST.cat='today';$('#qin').value='';const ds=stamps();if(!ds.includes(today())){ds.push(today());try{localStorage.setItem('seoltarot_days',JSON.stringify(ds.slice(-60)))}catch(e){}}
+function startDaily(){ST.daily=true;ST.mode=MODES[0];ST.cat='today';$('#qin').value='';const ds=stamps();if(!ds.includes(today())){ds.push(today());G.treats++;saveG();setTimeout(()=>toast('🦴 출석 보상! 간식 +1'),1200);try{localStorage.setItem('seoltarot_days',JSON.stringify(ds.slice(-60)))}catch(e){}}
   ST.streak=streakOf(ds);deal()}
+/* ============ 9-2. 설이 키우기: 도감 · 친밀도 · 꾸미기 · 부적 ============ */
+const SAVE_KEY='seoltarot_save';
+let G={cards:{},aff:0,treats:1,pets:{d:'',n:0},hanbok:'navy',theme:'night',seenNew:{},charmDay:''};
+try{Object.assign(G,JSON.parse(localStorage.getItem(SAVE_KEY)||'{}'))}catch(e){}
+const saveG=()=>{try{localStorage.setItem(SAVE_KEY,JSON.stringify(G))}catch(e){}};
+const dexN=()=>Object.keys(G.cards).length,affLv=()=>1+Math.floor(G.aff/25),majN=()=>Object.keys(G.cards).filter(k=>k[0]==='M').length;
+function toast(t,ms=2600){const el=$('#toast2');el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),ms)}
+const UNLOCK={hanbok:[{k:'navy',n:'남색',c:'#1f2c5e',ok:()=>true,why:''},{k:'red',n:'다홍',c:'#b8323a',ok:()=>dexN()>=10,why:'도감 10장'},{k:'green',n:'초록',c:'#2f7d5a',ok:()=>affLv()>=2,why:'친밀도 Lv.2'},
+  {k:'purple',n:'보라',c:'#6c3f8f',ok:()=>dexN()>=39,why:'도감 39장'},{k:'gold',n:'황금',c:'#c9982f',ok:()=>dexN()>=78,why:'도감 78장 완성'}],
+ theme:[{k:'night',n:'밤의 상담소',c:'#141a40',ok:()=>true,why:''},{k:'snow',n:'눈 오는 밤',c:'#cfe0ff',ok:()=>new Date().getMonth()===11||dexN()>=20,why:'12월 한정 · 도감 20장'},
+  {k:'blossom',n:'벚꽃',c:'#f4a7c0',ok:()=>affLv()>=3,why:'친밀도 Lv.3'},{k:'moon',n:'보름달',c:'#f3e3a3',ok:()=>majN()>=22,why:'메이저 22장'},{k:'firefly',n:'반딧불',c:'#bff07a',ok:()=>streakOf(stamps())>=7,why:'출석 7일'}]};
+const LV_LINES=['킁킁, 반가워요.','오늘도 와 줬네요! 꼬리가 저절로 흔들려요.','당신 발소리는 멀리서도 알아요.','사실 당신 오는 시간만 기다렸어요.','당신은 설이의 제일 친한 손님이에요. 멍!'];
+function collect(ids){let fresh=[];ids.forEach(id=>{const c=G.cards[id];if(c)c.n++;else{G.cards[id]={n:1,d:today()};fresh.push(id)}});
+  if(fresh.length){const before=dexN()-fresh.length;if(Math.floor(dexN()/5)>Math.floor(before/5)){G.treats++;setTimeout(()=>toast('🦴 도감 보상! 간식 +1'),2900)}
+    const nm=DECK.find(c=>c.id===fresh[0]).name;toast(`📖 새 카드 「${nm}」${fresh.length>1?` 외 ${fresh.length-1}장`:''} · 도감 ${dexN()}/78`);[10,20,39,78].forEach(m=>{if(before<m&&dexN()>=m)setTimeout(()=>toast(`🎁 도감 ${m}장 달성! 꾸미기가 열렸어요`),5600)})}
+  saveG();paintMenus()}
+function paintMenus(){const dot=dexN()>0&&!G.seenDex?'<span class="dot"></span>':'';const charm=G.charmDay!==today()?'<span class="dot"></span>':'';
+  const html=`<button data-o="dex"><b>📖</b>도감${dot}</button><button data-o="play"><b>🐶</b>설이랑 놀기</button><button data-o="charm"><b>🧧</b>오늘의 부적${charm}</button><button data-o="deco"><b>🎨</b>꾸미기</button>`;
+  ['#menuStart','#menuSetup'].forEach(id=>{const el=$(id);if(el)el.innerHTML=html})}
+let retSetup=false;
+function openPanel(id){retSetup=$('#setup').classList.contains('on');['#setup','#result','#history','#dex','#play','#deco','#charm'].forEach(x=>show(x,false));
+  ({dex:paintDex,play:paintPlay,deco:paintDeco,charm:paintCharm})[id]();show('#'+id,true);try{navigator.vibrate&&navigator.vibrate(8)}catch(e){}}
+function closePanel(id){show('#'+id,false);if(retSetup||ST.phase==='setup')show('#setup',true);else if(ST.phase==='result')show('#result',true)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-o]');if(b){if(!$('#start').hidden){$('#start').hidden=true;S.introGo=true;audio();$('#snd').style.display='block';$('#topbtn').style.display='block';ST.phase='setup';paintSetup()}openPanel(b.dataset.o)}
+  const c=e.target.closest('[data-x]');if(c)closePanel(c.dataset.x)});
+// 도감
+let dexTab='M';
+function paintDex(){G.seenDex=1;saveG();paintMenus();const tabs=[['M','메이저'],['w','완드'],['c','컵'],['s','소드'],['p','펜타클']];
+  const list=DECK.filter(c=>c.id[0]===dexTab||(dexTab==='M'&&c.arc==='major')).filter(c=>dexTab==='M'?c.arc==='major':c.arc==='minor');
+  $('#dexIn').innerHTML=`<h2>📖 설이의 카드 도감</h2><div class="kw">모은 카드 <b style="color:var(--gold2)">${dexN()} / 78</b> · 5장마다 간식 🦴</div><div class="bar2"><i style="width:${dexN()/78*100}%"></i></div>
+   <div class="tabs">${tabs.map(([k,n])=>`<button data-t="${k}" aria-pressed="${k===dexTab}">${n} ${DECK.filter(c=>(k==='M'?c.arc==='major':c.id[0]===k&&c.arc==='minor')&&G.cards[c.id]).length}/${k==='M'?22:14}</button>`).join('')}</div>
+   <div class="grid">${list.map(c=>{const got=G.cards[c.id];return `<button class="cell ${got?'':'lock'}" data-c="${c.id}" aria-label="${got?esc(c.name):'아직 못 만난 카드'}"><img loading="lazy" src="cards/${got?c.id:'back'}.webp" alt="">${got?(got.n>1?`<span class="n">×${got.n}</span>`:''):'<span class="q">?</span>'}</button>`}).join('')}</div>
+   <div class="row"><button class="gold" data-x="dex">닫기</button></div>`;
+  $('#dexIn').querySelector('.tabs').onclick=e=>{const b=e.target.closest('button');if(b){dexTab=b.dataset.t;paintDex()}};
+  $('#dexIn').querySelector('.grid').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;const c=DECK.find(x=>x.id===b.dataset.c),got=G.cards[c.id];
+    if(!got){toast('아직 만나지 못한 카드예요. 타로를 보면 열려요!');return}
+    $('#cvImg').src=`cards/${c.id}.webp`;$('#cvTxt').innerHTML=`<div class="nm" style="text-align:center">${esc(c.name)}</div><p class="kw" style="text-align:center">${esc(c.kw)}</p>
+     <p><b style="color:var(--gold2)">정방향</b> ${esc(c.up)}</p><p><b style="color:var(--gold2)">역방향</b> ${esc(c.rev)}</p><p><b style="color:var(--gold2)">설이의 조언</b> ${esc(c.advice)}</p>
+     <p class="kw">처음 만난 날 ${esc(got.d)} · ${got.n}번 만났어요</p>`;$('#cardView').hidden=false}}
+$('#cvClose').onclick=()=>{$('#cardView').hidden=true};
+// 설이랑 놀기
+function hearts(){const lv=affLv(),p=(G.aff%25)/25;return '♥'.repeat(Math.min(5,lv))+'♡'.repeat(Math.max(0,5-Math.min(5,lv)))+` <span class="kw">Lv.${lv} · 다음 레벨까지 ${Math.round((1-p)*100)}%</span>`}
+function paintPlay(){$('#playIn').innerHTML=`<h2>🐶 설이랑 놀기</h2><div class="hearts">${hearts()}</div><div class="bar2"><i style="width:${(G.aff%25)/25*100}%"></i></div>
+   <p>${esc(LV_LINES[Math.min(LV_LINES.length-1,affLv()-1)])}</p>
+   <p class="kw">설이를 화면에서 <b>직접 쓰다듬어</b> 보세요(하루 10번까지 친밀도 +1). 간식은 친밀도 +5예요.</p>
+   <div class="row"><button class="gold" id="feedBtn">🦴 간식 주기 (${G.treats}개)</button></div>
+   <div class="unl"><div><span>간식 얻는 법</span><span>오늘의 카드 출석 +1 · 도감 5장마다 +1</span></div>${UNLOCK.hanbok.concat(UNLOCK.theme).filter(u=>u.why.includes('친밀도')).map(u=>`<div class="${u.ok()?'ok':''}"><span>${u.ok()?'✅':'🔒'} ${u.n}</span><span>${u.why}</span></div>`).join('')}</div>
+   <div class="row"><button class="line" data-x="play">닫기</button></div>`;
+  $('#feedBtn').onclick=e=>{if(G.treats<1){toast('간식이 없어요. 오늘의 카드로 출석하면 받아요!');return}G.treats--;feed(e.target)}}
+function addAff(n){const lv=affLv();G.aff+=n;saveG();if(affLv()>lv){setTimeout(()=>{toast(`💕 친밀도 Lv.${affLv()}! ${affLv()===2?'초록 한복':affLv()===3?'벚꽃 상담소':'새 대사'}이(가) 열렸어요`);say(LV_LINES[Math.min(LV_LINES.length-1,affLv()-1)],4)},900)}}
+function heartBurst(){const p=new THREE.Vector3();S.master.head.getWorldPosition(p);p.y+=.4;burst(p,'#ff8fb0',30,1.6,1)}
+function bark(){const c=audio();if(!c)return;const t=c.currentTime;[0,.16].forEach(o=>{const os=c.createOscillator(),g=c.createGain();os.type='triangle';os.frequency.setValueAtTime(620,t+o);os.frequency.exponentialRampToValueAtTime(330,t+o+.12);g.gain.setValueAtTime(0,t+o);g.gain.linearRampToValueAtTime(.18,t+o+.01);g.gain.exponentialRampToValueAtTime(.001,t+o+.14);os.connect(g);g.connect(SND.m);os.start(t+o);os.stop(t+o+.16)})}
+function petSeol(){S.master.pet&&S.master.pet();heartBurst();bark();try{navigator.vibrate&&navigator.vibrate([10,30,10])}catch(e){}
+  if(G.pets.d!==today())G.pets={d:today(),n:0};if(G.pets.n<10){G.pets.n++;addAff(1)}else toast('설이가 오늘은 충분히 행복해요 ♥');
+  say(pickOne(['헤헤, 간지러워요!','멍! 좋아요!','킁킁, 손에서 좋은 냄새가 나요.','더 쓰다듬어 주세요…']),2);if($('#play').classList.contains('on'))paintPlay()}
+function feed(btn){const el=$('#bone'),r=btn.getBoundingClientRect(),p=new THREE.Vector3();S.master.head.getWorldPosition(p);p.project(S.cam);
+  const tx=(p.x+1)/2*innerWidth,ty=(1-p.y)/2*innerHeight;el.style.transition='none';el.style.opacity=1;el.style.transform=`translate(${r.left+r.width/2-20}px,${r.top-20}px) rotate(0)`;
+  requestAnimationFrame(()=>{el.style.transition='';el.style.transform=`translate(${tx-20}px,${ty}px) rotate(540deg) scale(.6)`});
+  setTimeout(()=>{el.style.opacity=0;S.master.pet&&S.master.pet();S.master.st.smile=3;heartBurst();bark();chime(PENTA[3],1.5,.08);say('와아, 간식이다! 고마워요. 멍!',3);addAff(5);paintPlay()},900)}
+// 꾸미기
+function applyDeco(){S.master.hanbok&&S.master.hanbok(G.hanbok);setTheme(G.theme)}
+function paintDeco(){const row=(list,cur,kind)=>`<div class="opt">${list.map(u=>`<button class="sw2" data-${kind}="${u.k}" aria-pressed="${u.k===cur}" ${u.ok()?'':'disabled'}><i style="background:${u.c}"></i>${u.ok()?'':'🔒 '}${u.n}${u.ok()?'':`<small>${u.why}</small>`}</button>`).join('')}</div>`;
+  $('#decoIn').innerHTML=`<h2>🎨 꾸미기</h2><div class="lab">설이 한복 색</div>${row(UNLOCK.hanbok,G.hanbok,'h')}<div class="lab">상담소 분위기</div>${row(UNLOCK.theme,G.theme,'t')}
+   <p class="kw">도감을 모으고, 설이와 친해지고, 출석하면 하나씩 열려요.</p><div class="row"><button class="gold" data-x="deco">닫기</button></div>`;
+  $('#decoIn').onclick=e=>{const h=e.target.closest('[data-h]'),t=e.target.closest('[data-t]');if(h&&!h.disabled){G.hanbok=h.dataset.h;saveG();S.master.hanbok(G.hanbok);S.master.st.smile=1.5;paintDeco()}
+    if(t&&!t.disabled){G.theme=t.dataset.t;saveG();setTheme(G.theme);paintDeco()}}}
+// 상담소 분위기(입자·빛)
+function setTheme(k){if(!S.wx){const N=160,pos=new Float32Array(N*3);for(let i=0;i<N;i++){pos[i*3]=(rng()-.5)*10;pos[i*3+1]=rng()*7;pos[i*3+2]=(rng()-.5)*7-1}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));const dc=document.createElement('canvas');dc.width=dc.height=32;{const q=dc.getContext('2d'),gr=q.createRadialGradient(16,16,1,16,16,15);gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.5,'rgba(255,255,255,.7)');gr.addColorStop(1,'rgba(255,255,255,0)');q.fillStyle=gr;q.fillRect(0,0,32,32)}
+    S.wx=new THREE.Points(g,new THREE.PointsMaterial({size:.11,map:new THREE.CanvasTexture(dc),transparent:true,depthWrite:false,opacity:.95}));S.sc.add(S.wx);
+    S.moon=new THREE.Mesh(new THREE.CircleGeometry(.7,48),new THREE.MeshBasicMaterial({color:'#fff3c4'}));S.moon.position.set(-1.6,3.25,-4.1);S.sc.add(S.moon)}
+  const cfg={night:[null,0,'#07080f'],snow:['#ffffff',.55,'#0b1020'],blossom:['#ffb7cf',.35,'#120a14'],moon:[null,0,'#060812'],firefly:['#d4ff7a',.18,'#050a08']}[k]||[null,0,'#07080f'];
+  S.wx.visible=!!cfg[0];if(cfg[0]){S.wx.material.color.set(cfg[0]);S.wx.userData={k,sp:cfg[1]}}S.moon.visible=k==='moon';S.sc.background.set(cfg[2]);S.sc.fog.color.set(cfg[2]);S.theme=k}
+function tickTheme(dt){if(!S.wx||!S.wx.visible)return;const a=S.wx.geometry.attributes.position,k=S.wx.userData.k,sp=S.wx.userData.sp;
+  for(let i=0;i<a.count;i++){let x=a.getX(i),y=a.getY(i),z=a.getZ(i);if(k==='firefly'){x+=Math.sin(T*.7+i)*dt*.3;y+=Math.cos(T*.5+i*1.3)*dt*.25}else{y-=sp*dt*(1+(i%5)*.15);x+=Math.sin(T+i)*dt*(k==='blossom'?.35:.12);if(y<-.3){y=7;x=(rng()-.5)*10}}a.setXYZ(i,x,y,z)}
+  a.needsUpdate=true;if(k==='firefly')S.wx.material.opacity=.55+Math.sin(T*3)*.35}
+// 오늘의 행운 부적
+const CHARM_KIND=['재물운','연애운','인연운','학업운','행운','소원 성취','건강한 기운','합격운'],CHARM_ITEM=['따뜻한 차','파란 볼펜','작은 거울','손수건','동전 하나','향기 나는 핸드크림','노란 메모지','좋아하는 노래'];
+const CHARM_COLOR=[['다홍','#c8323a'],['쪽빛','#2f4fa8'],['연두','#7cbf4a'],['금빛','#d4a43a'],['보라','#7b4fa8'],['살구','#f2a47a']],CHARM_DIR=['동쪽','서쪽','남쪽','북쪽'];
+function charmData(){const s=dailyIdx()*7+new Date().getDate();const pk=(a,o)=>a[(s+o)%a.length];return {kind:pk(CHARM_KIND,1),item:pk(CHARM_ITEM,3),color:pk(CHARM_COLOR,5),dir:pk(CHARM_DIR,2),num:(s%45)+1,card:DECK[dailyIdx()]}}
+async function charmCanvas(){const W=1080,H=1920,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d'),d=charmData();
+  const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#f6dc7a');bg.addColorStop(1,'#e9bf4f');g.fillStyle=bg;g.fillRect(0,0,W,H);
+  for(let i=0;i<2600;i++){g.fillStyle=`rgba(120,80,20,${Math.random()*.06})`;g.fillRect(Math.random()*W,Math.random()*H,2,2)}
+  g.strokeStyle='#b0242c';g.lineWidth=14;g.strokeRect(50,50,W-100,H-100);g.lineWidth=4;g.strokeRect(80,80,W-160,H-160);
+  g.fillStyle='#b0242c';g.textAlign='center';g.font='bold 54px "Gowun Batang",serif';g.fillText('설이네 행운 부적',W/2,200);
+  g.font='28px "Gowun Dodum",sans-serif';g.fillText(today().replace(/-/g,'. '),W/2,252);
+  const face=await loadImg(SEOL_HEAD);g.save();g.beginPath();g.arc(W/2,520,210,0,7);g.fillStyle='#fff6dd';g.fill();g.lineWidth=12;g.stroke();g.clip();if(face)g.drawImage(face,W/2-260,520-200,520,520*face.height/face.width);g.restore();
+  g.font='bold 150px "Gowun Batang",serif';g.fillStyle='#b0242c';g.fillText(d.kind,W/2,930);g.font='bold 120px "Gowun Batang",serif';g.fillText('大吉',W/2,1080);
+  g.strokeStyle='#b0242c';g.lineWidth=6;for(let i=0;i<3;i++){g.beginPath();g.moveTo(200,1150+i*14);g.bezierCurveTo(420,1120,660,1190,880,1150+i*14);g.stroke()}
+  g.fillStyle='#5a2a10';g.font='40px "Gowun Dodum",sans-serif';const L=[`행운의 색  ${d.color[0]}`,`행운의 숫자  ${d.num}`,`행운의 방향  ${d.dir}`,`행운의 물건  ${d.item}`,`오늘의 카드  ${d.card.name}`];
+  L.forEach((t,i)=>g.fillText(t,W/2,1290+i*76));g.fillStyle=d.color[1];g.beginPath();g.arc(W/2-250,1277,16,0,7);g.fill();
+  g.fillStyle='#b0242c';g.font='bold 34px "Gowun Batang",serif';g.fillText('— 설이 도사 —',W/2,H-200);g.font='26px "Gowun Dodum",sans-serif';g.fillStyle='#7a4a20';g.fillText('재미로 보는 부적 · tpl-studio.github.io/tarot',W/2,H-140);
+  return c}
+async function paintCharm(){G.charmDay=today();saveG();paintMenus();const d=charmData();$('#charmIn').innerHTML=`<h2>🧧 오늘의 행운 부적</h2><p class="kw">매일 바뀌어요. 휴대폰 배경화면으로 써 보세요.</p><canvas id="charmCv"></canvas>
+   <p style="text-align:center">오늘은 <b style="color:var(--gold2)">${esc(d.kind)} 大吉</b> · 행운의 숫자 ${d.num}</p>
+   <div class="row"><button class="gold" id="charmSave">배경화면으로 저장</button><button class="line" data-x="charm">닫기</button></div>`;
+  const cv=await charmCanvas(),pv=$('#charmCv');pv.width=cv.width/3;pv.height=cv.height/3;pv.getContext('2d').drawImage(cv,0,0,pv.width,pv.height);
+  $('#charmSave').onclick=async e=>{const blob=await new Promise(r=>cv.toBlob(r,'image/png'));const dl=await cap('downloads');
+    try{if(dl){await dl.save({filename:'seol-charm.png',data:blob});e.target.textContent='저장했어요'}
+      else if(navigator.share&&navigator.canShare&&navigator.canShare({files:[new File([blob],'seol-charm.png',{type:'image/png'})]}))await navigator.share({files:[new File([blob],'seol-charm.png',{type:'image/png'})]});
+      else{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='seol-charm.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}}catch(err){}}}
 function openSetup(){ST.daily=false;ST.phase='setup';hint('');paintSetup();show('#setup',true);$('#topbtn').style.display='block';say('어서 오세요. 무엇이 궁금하신가요?')}
 function openHistory(){let h=[];try{h=JSON.parse(localStorage.getItem('seoltarot')||'[]')}catch(e){}
   $('#histIn').innerHTML=`<h2>상담 기록</h2>${h.length?h.map(r=>`<div class="hist"><div class="pos">${new Date(r.at).toLocaleString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})} · ${esc(r.mode)} · ${esc(r.cat)}</div><div>${esc(r.cards.join(', '))}</div>${r.q?`<div class="kw">질문: ${esc(r.q)}</div>`:''}<div class="kw">조언: ${esc(r.advice)}</div></div>`).join(''):'<p class="kw">아직 기록이 없어요. 이 브라우저에만 저장돼요.</p>'}
@@ -830,6 +988,7 @@ cvs.addEventListener('pointermove',e=>{S.look.set(e.clientX/innerWidth*2-1,-(e.c
 let press=null;
 cvs.addEventListener('pointerdown',e=>{S.look.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);
   if(ST.phase==='focus'){focusNext();return}
+  if(ST.phase!=='pick'&&S.master.meshes){S.ndc.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);S.ray.setFromCamera(S.ndc,S.cam);if(S.ray.intersectObjects(S.master.meshes,false).length){petSeol();return}}
   if(ST.phase!=='pick')return;press={x:e.clientX,y:e.clientY};setHover(cardAt(e.clientX,e.clientY));try{cvs.setPointerCapture(e.pointerId)}catch(err){}});
 cvs.addEventListener('pointermove',e=>{if(press&&ST.phase==='pick'){const c=cardAt(e.clientX,e.clientY);if(c)setHover(c)}});
 cvs.addEventListener('pointerup',e=>{if(!press)return;press=null;if(ST.phase==='pick'&&hover)pickAt(0,0,hover);else setHover(null)});
@@ -842,7 +1001,7 @@ function loop(now){const raw=(now-last)/1000,dt=Math.min(.05,raw);last=now;T+=dt
   runTweens(dt);S.master.update(T,dt);
   S.candles.forEach(c=>{const f=1+Math.sin(T*9+c.ph)*.08+Math.sin(T*23+c.ph)*.05;c.l.intensity=.9*f;c.f.scale.set(f,1.8*f,f)});
   S.smoke.forEach(sp=>{sp.userData.t+=dt;const u=(sp.userData.t%6)/6;sp.position.set(S.burner.x+Math.sin(u*9+sp.id)*.12*u,S.burner.y+.1+u*2.2,S.burner.z+Math.cos(u*7)*.08*u);sp.scale.setScalar(.15+u*.6);sp.material.opacity=Math.sin(u*Math.PI)*.35});
-  S.ballLight.intensity=.5+Math.sin(T*1.5)*.2;S.ball.rotation.y+=dt*.2;S.circ.rotation.z+=dt*.03;
+  tickTheme(dt);S.ballLight.intensity=.5+Math.sin(T*1.5)*.2;S.ball.rotation.y+=dt*.2;S.circ.rotation.z+=dt*.03;
   S.dust.rotation.y+=dt*.01;S.dust.position.y=Math.sin(T*.3)*.1;
   for(let k=S.bursts.length-1;k>=0;k--){const b=S.bursts[k];b.life-=dt;const a=b.pts.geometry.attributes.position;
     for(let j=0;j<b.vel.length;j++){b.vel[j].y-=dt*(b.grav??2.5);a.array[j*3]+=b.vel[j].x*dt;a.array[j*3+1]+=b.vel[j].y*dt;a.array[j*3+2]+=b.vel[j].z*dt}
@@ -856,7 +1015,7 @@ function loop(now){const raw=(now-last)/1000,dt=Math.min(.05,raw);last=now;T+=dt
 function boot(){
   if(!window.THREE){$('#loading').textContent='3D를 불러오지 못했어요. 새로고침해 주세요.';return}
   try{initScene()}catch(e){$('#loading').textContent='이 기기에서는 3D를 켤 수 없어요.';return}
-  $('#loading').remove();$('#start').hidden=false;paintStreak();requestAnimationFrame(loop);setTimeout(()=>say('멍. 설이네 타로에 오신 걸 환영해요.'),600)}
+  $('#loading').remove();$('#start').hidden=false;paintStreak();paintMenus();setTimeout(applyDeco,400);requestAnimationFrame(loop);setTimeout(()=>say('멍. 설이네 타로에 오신 걸 환영해요.'),600)}
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(boot,boot);else boot();
 }
 </script>
