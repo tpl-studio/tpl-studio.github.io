@@ -15,6 +15,7 @@
 :root{color-scheme:dark;--ink:#f3ecdc;--soft:#b8b2c8;--gold:#e2b866;--gold2:#f5d995;--navy:#141a33;--panel:rgba(16,18,38,.9);--line:rgba(226,184,102,.35);--cream:#f4ecdb}
 *{box-sizing:border-box;min-width:0}
 html,body{margin:0;height:100%;background:#07080f;color:var(--ink);font:16px/1.6 "Gowun Dodum",system-ui,sans-serif;overflow:hidden}
+#vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(120% 90% at 50% 45%,transparent 55%,rgba(0,0,0,.55))}
 #gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .serif{font-family:"Gowun Batang",serif}
 button{font:inherit;color:inherit;cursor:pointer;border:0;border-radius:14px;min-height:44px}
@@ -74,12 +75,17 @@ input[type=text]{width:100%;font:inherit;font-size:16px;padding:10px 14px;border
 .ai p{white-space:pre-wrap;margin:6px 0 0}
 .ai .wait{color:var(--soft);font-size:14px}
 .row.wrap2{flex-wrap:wrap}.row.wrap2 button{flex:1 1 40%}
+#focus{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translate(-50%,20px);width:min(92vw,520px);background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 16px;opacity:0;pointer-events:none;transition:opacity .35s,transform .35s;text-align:center}
+#focus.on{opacity:1;transform:translate(-50%,0)}
+#focus .fp{font-size:13px;color:var(--gold)}#focus .fn{font-family:"Gowun Batang",serif;font-size:22px;font-weight:700}#focus p{margin:4px 0 0;font-size:15px}#focus .ft{font-size:12px;color:var(--soft);margin-top:6px}
+#skipBtn{position:fixed;right:12px;top:calc(56px + env(safe-area-inset-top));display:none;background:var(--panel);border:1px solid var(--line);padding:0 12px;font-size:14px}
 @keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
 @media(prefers-reduced-motion:reduce){.sheet.on{animation:none}#say{transition:none}}
 </style>
 </head>
 <body>
 <canvas id="gl"></canvas>
+<div id="vig"></div>
 <div id="loading">상담소 불을 켜는 중…</div>
 <div id="hint"></div>
 <div id="say"></div>
@@ -100,6 +106,8 @@ input[type=text]{width:100%;font:inherit;font-size:16px;padding:10px 14px;border
   <div class="lab">직접 질문 (선택)</div><input type="text" id="qin" maxlength="60" placeholder="예: 이번 달에 이직해도 될까요?">
   <button class="gold go" id="shuffleBtn">설이에게 카드 섞어 달라고 하기</button>
 </div></section>
+<div id="focus"><div class="fp" id="fPos"></div><div class="fn"><span id="fName"></span><span class="dir" id="fDir"></span></div><p id="fText"></p><div class="ft">화면을 누르면 다음 카드</div></div>
+<button id="skipBtn">바로 결과 보기</button>
 <div id="pickbar"><button class="gold" id="readBtn">해석 보기</button></div>
 <section class="sheet" id="result"><div class="wrap" id="resultIn"></div></section>
 <section class="sheet" id="history"><div class="wrap" id="histIn"></div></section>
@@ -215,7 +223,7 @@ function backTex(){if(texCache.back)return texCache.back;const cv=document.creat
   paw(g,CW/2,CH/2+4,30,'#e2b866');
   [[40,48],[CW-40,48],[40,CH-48],[CW-40,CH-48]].forEach(([x,y])=>{g.fillStyle='#e2b866';g.beginPath();for(let k=0;k<8;k++){const a=k*Math.PI/4,r=k%2?4:10;g.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r)}g.fill()});
   return texCache.back=new THREE.CanvasTexture(cv)}
-function faceCanvas(c){const cv=document.createElement('canvas');cv.width=CW;cv.height=CH;const g=cv.getContext('2d');
+function faceCanvas(c){if(ART[c.id])return artCanvas(c,ART[c.id]);const cv=document.createElement('canvas');cv.width=CW;cv.height=CH;const g=cv.getContext('2d');
   const col=c.suit?c.suit.col:'#7a5bc0';
   g.fillStyle='#f4ecdb';roundRect(g,0,0,CW,CH,18);g.fill();g.strokeStyle='#c99a45';g.lineWidth=6;roundRect(g,10,10,CW-20,CH-20,12);g.stroke();
   const gr=g.createRadialGradient(CW/2,CH*.42,10,CW/2,CH*.42,120);gr.addColorStop(0,col+'55');gr.addColorStop(1,'#f4ecdb00');g.fillStyle=gr;g.fillRect(20,20,CW-40,CH-40);
@@ -229,7 +237,18 @@ function faceCanvas(c){const cv=document.createElement('canvas');cv.width=CW;cv.
   g.fillStyle='#2a2238';g.font='bold 30px "Gowun Batang",serif';const nm=c.name;g.fillText(nm.length>7?nm.slice(0,7):nm,CW/2,CH-46);if(nm.length>7){g.font='bold 22px "Gowun Batang",serif';g.fillText(nm.slice(7),CW/2,CH-22)}
   g.fillStyle='#8a7a5a';g.font='13px "Gowun Dodum",sans-serif';g.fillText('DOG TAROT',CW/2,CH-108);
   return cv}
-function faceTex(i){if(!texCache[i]){const t=new THREE.CanvasTexture(faceCanvas(DECK[i]));t.anisotropy=4;texCache[i]=t}return texCache[i]}
+// 카드 그림: cards/<id>.webp (설이 일러스트 78장). 없거나 못 받으면 기호 카드로 대신.
+const ART={},ARTP={};
+function loadArt(c){if(ARTP[c.id])return ARTP[c.id];return ARTP[c.id]=new Promise(r=>{const im=new Image();im.onload=()=>{ART[c.id]=im;r(im)};im.onerror=()=>r(null);im.src='cards/'+c.id+'.webp'})}
+function artCanvas(c,im){const cv=document.createElement('canvas');cv.width=CW;cv.height=CH;const g=cv.getContext('2d');
+  roundRect(g,0,0,CW,CH,18);g.save();g.clip();const s=Math.max(CW/im.width,CH/im.height);g.drawImage(im,(CW-im.width*s)/2,(CH-im.height*s)/2,im.width*s,im.height*s);
+  const gr=g.createLinearGradient(0,CH-120,0,CH);gr.addColorStop(0,'rgba(12,14,34,0)');gr.addColorStop(.45,'rgba(12,14,34,.86)');gr.addColorStop(1,'rgba(12,14,34,.95)');g.fillStyle=gr;g.fillRect(0,CH-120,CW,120);g.restore();
+  g.strokeStyle='#e2b866';g.lineWidth=5;roundRect(g,4,4,CW-8,CH-8,16);g.stroke();
+  const tag=c.arc==='major'?ROMAN[c.num]:'';if(tag){g.fillStyle='rgba(12,14,34,.8)';roundRect(g,CW/2-34,12,68,30,15);g.fill();g.fillStyle='#f5d995';g.font='bold 18px "Gowun Batang",serif';g.textAlign='center';g.fillText(tag,CW/2,33)}
+  g.textAlign='center';g.fillStyle='#f5d995';const nm=c.name;g.font=`bold ${nm.length>7?24:30}px "Gowun Batang",serif`;g.fillText(nm,CW/2,CH-30);
+  return cv}
+function faceTex(i){if(!texCache[i]){const c=DECK[i],cv=ART[c.id]?artCanvas(c,ART[c.id]):faceCanvas(c),t=new THREE.CanvasTexture(cv);t.anisotropy=4;t.encoding=THREE.sRGBEncoding;texCache[i]=t;
+  if(!ART[c.id])loadArt(c).then(im=>{if(im){t.image=artCanvas(c,im);t.needsUpdate=true}})}return texCache[i]}
 
 /* ============ 6. 3D 장면 ============ */
 const S={},USE_PHOTO=true;
@@ -248,9 +267,24 @@ function initScene(){
   g.font='22px serif';g.fillStyle='rgba(226,184,102,.7)';'☾✦☀★♡⚖◎✧☆♆⟳✚'.split('').forEach((s,k)=>{const a=k*Math.PI/6;g.fillText(s,Math.cos(a)*215-8,Math.sin(a)*215+8)});
   const wall=new THREE.Mesh(new THREE.PlaneGeometry(30,16),new THREE.MeshStandardMaterial({color:'#0d1024',roughness:1}));wall.position.set(0,4,-4.2);sc.add(wall);
   const circ=S.circ=new THREE.Mesh(new THREE.PlaneGeometry(5.2,5.2),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(mc),transparent:true,opacity:.55,depthWrite:false}));circ.position.set(0,3.1,-4.15);sc.add(circ);
+  const wc=document.createElement('canvas');wc.width=256;wc.height=384;{const g=wc.getContext('2d');const gr=g.createRadialGradient(128,192,10,128,192,220);gr.addColorStop(0,'#f6d9a0');gr.addColorStop(1,'#a86a2c');g.fillStyle=gr;g.fillRect(0,0,256,384);
+    g.strokeStyle='#3a2414';g.lineWidth=7;for(let x=0;x<=256;x+=42.6){g.beginPath();g.moveTo(x,0);g.lineTo(x,384);g.stroke()}for(let y=0;y<=384;y+=48){g.beginPath();g.moveTo(0,y);g.lineTo(256,y);g.stroke()}g.lineWidth=16;g.strokeRect(0,0,256,384)}
+  const wtex=new THREE.CanvasTexture(wc);wtex.encoding=THREE.sRGBEncoding;
+  [-4.6,4.6].forEach(x=>{const w=new THREE.Mesh(new THREE.PlaneGeometry(2,3),new THREE.MeshBasicMaterial({map:wtex,color:'#b08060'}));w.position.set(x,3.2,-4.12);sc.add(w);const l=new THREE.PointLight('#ffb870',.35,6);l.position.set(x*.8,3,-3.4);sc.add(l)});
+  const smc=document.createElement('canvas');smc.width=smc.height=64;{const g=smc.getContext('2d');const gr=g.createRadialGradient(32,32,2,32,32,30);gr.addColorStop(0,'rgba(230,225,240,.5)');gr.addColorStop(1,'rgba(230,225,240,0)');g.fillStyle=gr;g.fillRect(0,0,64,64)}
+  const smt=new THREE.CanvasTexture(smc);S.smoke=[];for(let k=0;k<14;k++){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:smt,transparent:true,depthWrite:false,opacity:0}));sp.userData.t=k/14*6;sc.add(sp);S.smoke.push(sp)}
+  const burner=new THREE.Mesh(new THREE.CylinderGeometry(.16,.12,.14,20),new THREE.MeshStandardMaterial({color:'#e2b866',metalness:.85,roughness:.35}));burner.position.set(-2.55,.07,.35);sc.add(burner);S.burner=burner.position;
   // 바닥 · 탁자
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(30,30),new THREE.MeshStandardMaterial({color:'#1a120c',roughness:.9}));floor.rotation.x=-Math.PI/2;floor.position.y=-1.6;floor.receiveShadow=true;sc.add(floor);
-  const table=new THREE.Mesh(new THREE.CylinderGeometry(3.4,3.5,.25,64),new THREE.MeshStandardMaterial({color:'#1c2552',roughness:.8}));table.position.y=-.12;table.receiveShadow=true;sc.add(table);
+  const fc=document.createElement('canvas');fc.width=fc.height=512;{const g=fc.getContext('2d');for(let k=0;k<8;k++){const v=30+((k*53)%18);g.fillStyle=`rgb(${v+18},${v+6},${v-6})`;g.fillRect(0,k*64,512,64);g.strokeStyle='rgba(0,0,0,.35)';g.lineWidth=2;g.strokeRect(0,k*64,512,64);
+    for(let j=0;j<10;j++){g.strokeStyle=`rgba(255,220,170,${.03+j%3*.01})`;g.beginPath();g.moveTo(0,k*64+6+j*6);g.bezierCurveTo(170,k*64+j*6,340,k*64+12+j*6,512,k*64+4+j*6);g.stroke()}}}
+  const ftex=new THREE.CanvasTexture(fc);ftex.wrapS=ftex.wrapT=THREE.RepeatWrapping;ftex.repeat.set(6,6);ftex.encoding=THREE.sRGBEncoding;
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(30,30),new THREE.MeshStandardMaterial({map:ftex,roughness:.8}));floor.rotation.x=-Math.PI/2;floor.position.y=-1.6;floor.receiveShadow=true;sc.add(floor);
+  const tc=document.createElement('canvas');tc.width=tc.height=1024;{const g=tc.getContext('2d');const gr=g.createRadialGradient(512,512,40,512,512,520);gr.addColorStop(0,'#2a3470');gr.addColorStop(1,'#141a40');g.fillStyle=gr;g.fillRect(0,0,1024,1024);
+    g.strokeStyle='rgba(226,184,102,.22)';g.lineWidth=3;const cloud=(x,y,r)=>{g.beginPath();g.arc(x,y,r,Math.PI*.9,Math.PI*2.1);g.arc(x+r*1.1,y,r*.7,Math.PI,Math.PI*2.2);g.moveTo(x+r*.2,y+r*.4);g.arc(x+r*.2,y+r*.4,r*.35,Math.PI*1.1,Math.PI*2);g.stroke()};
+    for(let k=0;k<26;k++){const a=k*2.4,rr=120+(k*37)%360;cloud(512+Math.cos(a)*rr,512+Math.sin(a)*rr,18+(k%3)*6)}
+    g.strokeStyle='rgba(226,184,102,.5)';g.lineWidth=4;g.beginPath();g.arc(512,512,470,0,7);g.stroke();g.lineWidth=1.5;g.beginPath();g.arc(512,512,450,0,7);g.stroke()}
+  const ctex=new THREE.CanvasTexture(tc);ctex.encoding=THREE.sRGBEncoding;
+  const table=new THREE.Mesh(new THREE.CylinderGeometry(3.4,3.5,.25,64),[new THREE.MeshStandardMaterial({color:'#18204a',roughness:.85}),new THREE.MeshStandardMaterial({map:ctex,roughness:.7,metalness:.05}),new THREE.MeshStandardMaterial({color:'#18204a'})]);table.position.y=-.12;table.receiveShadow=true;sc.add(table);
   const cloth=new THREE.Mesh(new THREE.CylinderGeometry(3.42,3.9,1.5,64,1,true),new THREE.MeshStandardMaterial({color:'#151c44',roughness:.9,side:THREE.DoubleSide}));cloth.position.y=-.95;sc.add(cloth);
   const trim=new THREE.Mesh(new THREE.TorusGeometry(3.42,.035,8,96),new THREE.MeshStandardMaterial({color:'#e2b866',metalness:.9,roughness:.3}));trim.rotation.x=Math.PI/2;trim.position.y=0;sc.add(trim);
   // 수정구
@@ -416,7 +450,7 @@ function slotPos(k,n){ // 선택한 카드가 놓일 자리
   const gap=n>3?(S.portrait?.66:.74):.9,x0=-(n-1)*gap/2;return{px:x0+k*gap,py:.03,pz:1.05,rz:0}}
 function deal(){
   clearCards();ST.q=$('#qin').value.trim();show('#setup',false);ST.phase='shuffle';
-  ST.deck=shuffleDeck();const n=S.portrait?17:21;
+  ST.deck=shuffleDeck();const n=S.portrait?17:21;ST.deck.slice(0,n).forEach(d=>loadArt(DECK[d.i]));
   say('킁킁… 카드에 당신의 기운을 섞는 중이에요.');for(let k=0;k<10;k++)rustle(.06,k*.2);hint('설이가 카드를 섞고 있어요');S.master.st.shuffle=2.2;
   for(let k=0;k<n;k++){const d=ST.deck[k],g=makeCard(d.i);g.position.set(0,.06+k*.01,-.9);g.rotation.set(-Math.PI/2,0,0);ST.spread.push({g,d,picked:false});
     // 섞기: 좌우로 튀었다가 다시 모임
@@ -425,13 +459,17 @@ function deal(){
   setTimeout(()=>{const span=S.portrait?1.75:2.6;ST.spread.forEach((c,k)=>{const a=(k/(n-1)-.5)*span*.42,R=S.portrait?3.4:4.2;
       tween(c.g,{px:Math.sin(a)*R*.95,py:.04+k*.002,pz:-.1-Math.cos(a)*R+R*.92,rx:-Math.PI/2,ry:0,rz:-a},.55,k*.025)});
     setTimeout(()=>{ST.phase='pick';S.master.st.gest=1.4;const m=ST.mode;
-      say(m.free?'끌리는 카드를 1장에서 5장까지 골라 보세요.':`마음속 질문을 떠올리고 ${m.count}장을 골라 주세요.`,4);updatePickHint()},700)},2300);
+      say(m.free?'손가락으로 카드를 훑다가 끌리는 곳에서 떼세요. 1~5장.':`질문을 떠올리고, 카드를 훑다가 끌리는 곳에서 떼세요. ${m.count}장.`,4.5);updatePickHint()},700)},2300);
 }
 function updatePickHint(){const m=ST.mode,k=ST.picks.length;hint(m.free?`끌리는 카드 선택 (${k}/5)`:`카드를 골라 주세요 (${k}/${m.count})`);$('#pickbar').style.display=m.free&&k>0&&ST.phase==='pick'?'flex':'none'}
-function pickAt(cx,cy){
-  if(ST.phase!=='pick')return;S.ndc.set(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);S.ray.setFromCamera(S.ndc,S.cam);
-  const hits=S.ray.intersectObjects(ST.spread.filter(c=>!c.picked).map(c=>c.g),true);if(!hits.length)return;
-  let o=hits[0].object;while(o.parent&&!ST.spread.find(c=>c.g===o))o=o.parent;const c=ST.spread.find(x=>x.g===o);if(!c)return;
+function cardAt(cx,cy){S.ndc.set(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);S.ray.setFromCamera(S.ndc,S.cam);
+  const hits=S.ray.intersectObjects(ST.spread.filter(c=>!c.picked&&c.g.visible).map(c=>c.g),true);if(!hits.length)return null;
+  let o=hits[0].object;while(o.parent&&!ST.spread.find(c=>c.g===o))o=o.parent;return ST.spread.find(x=>x.g===o)||null}
+let hover=null;
+function setHover(c){if(hover===c)return;if(hover&&!hover.picked){hover.lift=0;hover.g.userData.glow.material.opacity=0}hover=c;if(c){c.lift=1;c.g.userData.glow.material.opacity=.35;try{navigator.vibrate&&navigator.vibrate(8)}catch(e){}rustle(.03)}}
+function pickAt(cx,cy,given){
+  if(ST.phase!=='pick')return;const c=given||cardAt(cx,cy);if(!c||c.picked)return;
+  try{navigator.vibrate&&navigator.vibrate(25)}catch(e){}hover=null;c.lift=0;c.ly=0;
   c.picked=true;const k=ST.picks.length,n=ST.mode.free?5:ST.mode.count;ST.picks.push({i:c.d.i,rev:c.d.rev,c});
   c.g.userData.glow.material.opacity=.55;chime(PENTA[k%PENTA.length],.9,.05);
   tween(c.g,{py:.7,pz:c.g.position.z+.25},.3,0,()=>{const sp=slotPos(k,ST.mode.free?Math.max(3,n):n);tween(c.g,{px:sp.px,py:sp.py+.25,pz:sp.pz,rx:-Math.PI/2,rz:sp.rz},.5,0,()=>{tween(c.g,{py:sp.py},.2);c.g.userData.glow.material.opacity=.0})});
@@ -446,8 +484,23 @@ function reveal(){
       const rz=g.rotation.z+(p.rev?Math.PI:0);
       tween(g,{py:.55,ry:Math.PI/2,rz},.32,0,()=>tween(g,{py:.03+k*.004,ry:Math.PI},.32,0,()=>{burst(g.position);chime(PENTA[k%PENTA.length]/2,2.4,.09)}));
     },600+k*(ST.picks.length>5?380:650))});
-  setTimeout(showResult,600+ST.picks.length*(ST.picks.length>5?380:650)+900);
+  setTimeout(startFocus,600+ST.picks.length*(ST.picks.length>5?380:650)+900);
 }
+// 결과 연출: 한 장씩 앞으로 크게 띄우고 설이가 한마디 → 다 보면 결과 시트
+let FK=-1,focusT=null;
+function startFocus(){ST.phase='focus';FK=-1;$('#skipBtn').style.display='block';focusNext()}
+function focusBack(k){const p=ST.picks[k];if(!p||!p.home)return;const g=p.c.g,sp=p.home;tween(g,{px:sp.px,py:sp.py,pz:sp.pz,rx:-Math.PI/2,ry:Math.PI,rz:sp.rz,s:1},.45)}
+function focusNext(){clearTimeout(focusT);if(FK>=0)focusBack(FK);FK++;
+  if(ST.phase!=='focus')return;
+  if(FK>=ST.picks.length){$('#focus').classList.remove('on');$('#skipBtn').style.display='none';ST.phase='reveal';setTimeout(showResult,450);return}
+  const p=ST.picks[FK],g=p.c.g,c=DECK[p.i];p.home={px:g.position.x,py:g.position.y,pz:g.position.z,rz:g.rotation.z};
+  const dir=new THREE.Vector3();S.cam.getWorldDirection(dir);const at=S.cam.position.clone().addScaledVector(dir,3.4);
+  tween(g,{px:at.x,py:at.y-.2,pz:at.z,rx:Math.asin(dir.y),ry:Math.PI,rz:p.rev?Math.PI:0,s:1.9},.55);
+  chime(PENTA[(FK+2)%PENTA.length],2,.07);
+  $('#fPos').textContent=`${ST.mode.pos[FK]} · ${FK+1}/${ST.picks.length}`;$('#fName').textContent=c.name;$('#fDir').textContent=p.rev?'역방향':'정방향';
+  $('#fText').textContent=field(c,ST.cat,p.rev);$('#focus').classList.add('on');S.master.st.gest=1;S.master.st.talk=1.5;
+  focusT=setTimeout(focusNext,ST.picks.length>5?2600:3800)}
+function skipFocus(){clearTimeout(focusT);if(ST.phase!=='focus')return;ST.phase='reveal';$('#focus').classList.remove('on');$('#skipBtn').style.display='none';if(FK>=0)focusBack(FK);setTimeout(showResult,500)}
 function cardImg(i){return faceCanvas(DECK[i]).toDataURL('image/png')}
 function showResult(){
   ST.phase='result';const R=ST.R=interpret(ST);[0,1,2].forEach(k=>chime(PENTA[k]/2,3,.06,k*.25));const cat=CATS.find(c=>c[0]===ST.cat)[1];
@@ -531,26 +584,35 @@ function openHistory(){let h=[];try{h=JSON.parse(localStorage.getItem('seoltarot
   show('#history',true);$('#histClose').onclick=()=>show('#history',false)}
 $('#topbtn').onclick=openHistory;
 $('#shuffleBtn').onclick=deal;
+$('#skipBtn').onclick=skipFocus;
 $('#readBtn').onclick=()=>{if(ST.picks.length)reveal()};
 $('#startBtn').onclick=()=>{audio();$('#snd').style.display='block';$('#start').hidden=true;openSetup()};
 $('#snd').onclick=()=>{SND.on=!SND.on;audio();if(SND.m)SND.m.gain.value=SND.on?.6:0;$('#snd').textContent=SND.on?'소리 켬':'소리 끔';$('#snd').setAttribute('aria-pressed',SND.on)};
 document.addEventListener('pointerdown',()=>{if(SND.ctx&&SND.on){audio()}},true);
 const cvs=document.getElementById('gl');
 cvs.addEventListener('pointermove',e=>{S.look.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1)});
-cvs.addEventListener('pointerdown',e=>{S.look.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);pickAt(e.clientX,e.clientY)});
+let press=null;
+cvs.addEventListener('pointerdown',e=>{S.look.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);
+  if(ST.phase==='focus'){focusNext();return}
+  if(ST.phase!=='pick')return;press={x:e.clientX,y:e.clientY};setHover(cardAt(e.clientX,e.clientY));try{cvs.setPointerCapture(e.pointerId)}catch(err){}});
+cvs.addEventListener('pointermove',e=>{if(press&&ST.phase==='pick'){const c=cardAt(e.clientX,e.clientY);if(c)setHover(c)}});
+cvs.addEventListener('pointerup',e=>{if(!press)return;press=null;if(ST.phase==='pick'&&hover)pickAt(0,0,hover);else setHover(null)});
+cvs.addEventListener('pointercancel',()=>{press=null;setHover(null)});
 
 /* ============ 10. 루프 ============ */
 let last=performance.now(),T=0;
 function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
   runTweens(dt);S.master.update(T,dt);
   S.candles.forEach(c=>{const f=1+Math.sin(T*9+c.ph)*.08+Math.sin(T*23+c.ph)*.05;c.l.intensity=.9*f;c.f.scale.set(f,1.8*f,f)});
+  S.smoke.forEach(sp=>{sp.userData.t+=dt;const u=(sp.userData.t%6)/6;sp.position.set(S.burner.x+Math.sin(u*9+sp.id)*.12*u,S.burner.y+.1+u*2.2,S.burner.z+Math.cos(u*7)*.08*u);sp.scale.setScalar(.15+u*.6);sp.material.opacity=Math.sin(u*Math.PI)*.35});
   S.ballLight.intensity=.5+Math.sin(T*1.5)*.2;S.ball.rotation.y+=dt*.2;S.circ.rotation.z+=dt*.03;
   S.dust.rotation.y+=dt*.01;S.dust.position.y=Math.sin(T*.3)*.1;
   for(let k=S.bursts.length-1;k>=0;k--){const b=S.bursts[k];b.life-=dt;const a=b.pts.geometry.attributes.position;
     for(let j=0;j<b.vel.length;j++){b.vel[j].y-=dt*2.5;a.array[j*3]+=b.vel[j].x*dt;a.array[j*3+1]+=b.vel[j].y*dt;a.array[j*3+2]+=b.vel[j].z*dt}
     a.needsUpdate=true;b.pts.material.opacity=Math.max(0,b.life);if(b.life<=0){S.sc.remove(b.pts);S.bursts.splice(k,1)}}
   // 선택 대기 카드: 살짝 떠오르는 숨쉬기
-  if(ST.phase==='pick')ST.spread.forEach((c,k)=>{if(!c.picked&&!tweens.some(w=>w.o===c.g))c.g.position.y=.04+k*.002+Math.max(0,Math.sin(T*2+k*.5))*.03});
+  if(ST.phase==='pick')ST.spread.forEach((c,k)=>{if(!c.picked&&!tweens.some(w=>w.o===c.g)){c.ly=(c.ly||0)+((c.lift||0)-(c.ly||0))*.25;if(c.base===undefined)c.base=c.g.position.z;
+    c.g.position.y=.04+k*.002+Math.max(0,Math.sin(T*2+k*.5))*.03+c.ly*.35;c.g.position.z=c.base+c.ly*.3}});
   if(sayT>0){sayT-=dt;if(sayT<=0)$('#say').classList.remove('on')}
   S.r.render(S.sc,S.cam);requestAnimationFrame(loop)}
 function boot(){
