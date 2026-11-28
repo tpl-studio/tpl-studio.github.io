@@ -607,14 +607,18 @@ function unlockIOS(){// 아이폰 무음 스위치·잠금 해제: 소리 세션
   if(!SND.tag){try{SND.tag=new Audio(SILENT);SND.tag.loop=true;SND.tag.setAttribute('playsinline','');SND.tag.play().catch(()=>{})}catch(e){}}else if(SND.tag.paused)SND.tag.play().catch(()=>{})}
 function audio(){unlockIOS();if(!SND.ctx){try{const C=window.AudioContext||window.webkitAudioContext;const c=SND.ctx=new C();SND.m=c.createGain();SND.m.gain.value=SND.on?.6:0;SND.m.connect(c.destination);amb()}catch(e){SND.ctx=null}}
   if(SND.ctx&&SND.ctx.state==='suspended')SND.ctx.resume();return SND.ctx}
-function amb(){// 바람·방 울림 같은 잔잔한 소리 + 가끔 울리는 싱잉볼(윙윙거리는 떨림 없음)
+function bgm(){// 대표님 Suno 곡(끊김 없이 반복) — 받으면 합성 배경음은 끄고 이 곡만
+  const c=SND.ctx;fetch('audio/bgm.mp3').then(r=>r.ok?r.arrayBuffer():Promise.reject()).then(a=>c.decodeAudioData(a)).then(b=>{
+    const src=c.createBufferSource(),g=c.createGain();src.buffer=b;src.loop=true;g.gain.value=0;g.gain.linearRampToValueAtTime(.55,c.currentTime+4);src.connect(g);g.connect(SND.m);src.start();
+    SND.bgm=true;if(SND.ambG){SND.ambG.forEach(n=>{try{n.gain.cancelScheduledValues(c.currentTime);n.gain.linearRampToValueAtTime(0,c.currentTime+3)}catch(e){}})}}).catch(()=>{})}
+function amb(){bgm();// 바람·방 울림 같은 잔잔한 소리 + 가끔 울리는 싱잉볼(윙윙거리는 떨림 없음)
   const c=SND.ctx,len=c.sampleRate*4,buf=c.createBuffer(2,len,c.sampleRate);
   for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);let b0=0,b1=0,b2=0;for(let k=0;k<len;k++){const w=Math.random()*2-1;b0=.99765*b0+w*.099;b1=.963*b1+w*.2965;b2=.57*b2+w*1.0526;d[k]=(b0+b1+b2+w*.1848)*.11}}
   const src=c.createBufferSource(),lp=c.createBiquadFilter(),g=c.createGain(),lfo=c.createOscillator(),lg=c.createGain();
-  src.buffer=buf;src.loop=true;lp.type='lowpass';lp.frequency.value=650;lp.Q.value=.3;g.gain.value=0;g.gain.linearRampToValueAtTime(.05,c.currentTime+3);
+  src.buffer=buf;src.loop=true;lp.type='lowpass';lp.frequency.value=650;lp.Q.value=.3;g.gain.value=0;g.gain.linearRampToValueAtTime(.05,c.currentTime+3);SND.ambG=[g];
   lfo.frequency.value=.07;lg.gain.value=.018;lfo.connect(lg);lg.connect(g.gain);src.connect(lp);lp.connect(g);g.connect(SND.m);src.start();lfo.start();
-  [196,293.66].forEach(f=>{const o=c.createOscillator(),og=c.createGain();o.type='sine';o.frequency.value=f;og.gain.value=0;og.gain.linearRampToValueAtTime(.008,c.currentTime+6);o.connect(og);og.connect(SND.m);o.start()});
-  const bowl=()=>{if(SND.on&&document.visibilityState!=='hidden')chime([392,440,523.25][Math.floor(Math.random()*3)],5.5,.035);setTimeout(bowl,9000+Math.random()*6000)};setTimeout(bowl,2500)}
+  [196,293.66].forEach(f=>{const o=c.createOscillator(),og=c.createGain();o.type='sine';o.frequency.value=f;og.gain.value=0;og.gain.linearRampToValueAtTime(.008,c.currentTime+6);(SND.ambG=SND.ambG||[]).push(og);o.connect(og);og.connect(SND.m);o.start()});
+  const bowl=()=>{if(SND.on&&!SND.bgm&&document.visibilityState!=='hidden')chime([392,440,523.25][Math.floor(Math.random()*3)],5.5,.035);setTimeout(bowl,9000+Math.random()*6000)};setTimeout(bowl,2500)}
 function chime(f=880,dur=1.4,vol=.16,delay=0){const c=audio();if(!c)return;const t=c.currentTime+delay;[1,2.01,3.02].forEach((m,i)=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f*m;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol/(i+1),t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+dur/(i+1));o.connect(g);g.connect(SND.m);o.start(t);o.stop(t+dur)})}
 function rustle(vol=.12,delay=0){const c=audio();if(!c)return;const t=c.currentTime+delay,n=Math.floor(c.sampleRate*.09),b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);for(let k=0;k<n;k++)d[k]=(Math.random()*2-1)*(1-k/n);
   const s=c.createBufferSource(),bp=c.createBiquadFilter(),g=c.createGain();s.buffer=b;bp.type='bandpass';bp.frequency.value=1800;bp.Q.value=.6;g.gain.value=vol;s.connect(bp);bp.connect(g);g.connect(SND.m);s.start(t)}
