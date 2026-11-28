@@ -112,6 +112,12 @@ input[type=text]{width:100%;font:inherit;font-size:16px;padding:10px 14px;border
 <section class="sheet" id="result"><div class="wrap" id="resultIn"></div></section>
 <section class="sheet" id="history"><div class="wrap" id="histIn"></div></section>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 <script>
 {
 /* ============ 1. 카드 데이터 (78장) ============ */
@@ -216,13 +222,14 @@ function suitIcon(g,kind,x,y,s,col){g.save();g.translate(x,y);g.strokeStyle=col;
   else if(kind==='sword'){g.beginPath();g.moveTo(0,-s*.85);g.lineTo(s*.1,s*.35);g.lineTo(-s*.1,s*.35);g.closePath();g.fill();g.fillRect(-s*.35,s*.35,s*.7,s*.1);g.fillRect(-s*.06,s*.45,s*.12,s*.35)}
   else{g.beginPath();g.arc(0,0,s*.6,0,7);g.stroke();g.beginPath();for(let k=0;k<5;k++){const a=-Math.PI/2+k*4*Math.PI/5;g[k?'lineTo':'moveTo'](Math.cos(a)*s*.45,Math.sin(a)*s*.45)}g.closePath();g.stroke()}
   g.restore()}
-function backTex(){if(texCache.back)return texCache.back;const cv=document.createElement('canvas');cv.width=CW;cv.height=CH;const g=cv.getContext('2d');
+function backTex(){if(texCache.back)return texCache.back;const t=backTex0();const im=new Image();im.onload=()=>{const cv=document.createElement('canvas');cv.width=CW;cv.height=CH;const g=cv.getContext('2d');roundRect(g,0,0,CW,CH,18);g.clip();g.drawImage(im,0,0,CW,CH);g.strokeStyle='#e2b866';g.lineWidth=5;roundRect(g,4,4,CW-8,CH-8,16);g.stroke();t.image=cv;t.needsUpdate=true};im.src='cards/back.webp';return t}
+function backTex0(){const cv=document.createElement('canvas');cv.width=CW;cv.height=CH;const g=cv.getContext('2d');
   g.fillStyle='#151a38';roundRect(g,0,0,CW,CH,18);g.fill();g.strokeStyle='#e2b866';g.lineWidth=5;roundRect(g,10,10,CW-20,CH-20,12);g.stroke();g.lineWidth=1.5;roundRect(g,20,20,CW-40,CH-40,8);g.stroke();
   g.save();g.translate(CW/2,CH/2);for(let r=0;r<3;r++){g.beginPath();g.arc(0,0,40+r*26,0,7);g.globalAlpha=.75-r*.2;g.stroke()}g.globalAlpha=1;
   for(let k=0;k<12;k++){g.rotate(Math.PI/6);g.beginPath();g.moveTo(0,-70);g.lineTo(5,-96);g.lineTo(0,-104);g.lineTo(-5,-96);g.closePath();g.fillStyle='#e2b866';g.fill()}g.restore();
   paw(g,CW/2,CH/2+4,30,'#e2b866');
   [[40,48],[CW-40,48],[40,CH-48],[CW-40,CH-48]].forEach(([x,y])=>{g.fillStyle='#e2b866';g.beginPath();for(let k=0;k<8;k++){const a=k*Math.PI/4,r=k%2?4:10;g.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r)}g.fill()});
-  return texCache.back=new THREE.CanvasTexture(cv)}
+  const tt=new THREE.CanvasTexture(cv);tt.encoding=THREE.sRGBEncoding;return texCache.back=tt}
 function faceCanvas(c){if(ART[c.id])return artCanvas(c,ART[c.id]);const cv=document.createElement('canvas');cv.width=CW;cv.height=CH;const g=cv.getContext('2d');
   const col=c.suit?c.suit.col:'#7a5bc0';
   g.fillStyle='#f4ecdb';roundRect(g,0,0,CW,CH,18);g.fill();g.strokeStyle='#c99a45';g.lineWidth=6;roundRect(g,10,10,CW-20,CH-20,12);g.stroke();
@@ -304,10 +311,15 @@ function initScene(){
   S.master=USE_PHOTO?buildPhotoMaster():buildMaster();sc.add(S.master.root);
   S.cardGeo=new THREE.PlaneGeometry(.62,1.0);
   S.ray=new THREE.Raycaster();S.ndc=new THREE.Vector2();S.look=new THREE.Vector2();
-  addEventListener('resize',resize);resize();
+  initBloom();addEventListener('resize',resize);resize();
 }
 function resize(){const w=innerWidth,h=innerHeight;S.r.setSize(w,h,false);S.cam.aspect=w/h;
-  const portrait=w/h<.8;S.cam.fov=portrait?52:40;S.cam.position.set(0,portrait?6.4:5.2,portrait?6.6:6.2);S.cam.lookAt(0,portrait?.9:.8,-.4);S.cam.updateProjectionMatrix();S.portrait=portrait}
+  const portrait=w/h<.8;S.cam.fov=portrait?52:40;S.camBase={p:new THREE.Vector3(0,portrait?6.4:5.2,portrait?6.6:6.2),t:new THREE.Vector3(0,portrait?.9:.8,-.4)};placeCam();S.cam.updateProjectionMatrix();S.portrait=portrait;
+  if(S.comp){S.comp.setSize(w,h);S.bloom.resolution.set(w,h)}}
+// 시작할 때 멀리서 상담소로 천천히 다가가는 카메라
+S.intro=1;function placeCam(){const b=S.camBase;if(!b)return;const e=S.intro*S.intro*(3-2*S.intro);S.cam.position.set(b.p.x,b.p.y+e*2.2,b.p.z+e*5.5);S.cam.lookAt(b.t.x,b.t.y+e*1.4,b.t.z)}
+function initBloom(){if(!THREE.EffectComposer||!THREE.UnrealBloomPass)return;try{const c=new THREE.EffectComposer(S.r);c.setPixelRatio(Math.min(1.5,devicePixelRatio||1));c.addPass(new THREE.RenderPass(S.sc,S.cam));
+  S.bloom=new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.6,.45,.8);c.addPass(S.bloom);S.comp=c}catch(e){S.comp=null}}
 
 /* ============ 7. 설이 (교체 가능한 캐릭터 모듈) ============ */
 // 나중에 고퀄 3D 모델(glTF)로 바꿀 때: 같은 모양의 {root, head, eyes, pawR, pawL, update(t)} 를 돌려주면 됨.
@@ -454,7 +466,9 @@ function deal(){
   say('킁킁… 카드에 당신의 기운을 섞는 중이에요.');for(let k=0;k<10;k++)rustle(.06,k*.2);hint('설이가 카드를 섞고 있어요');S.master.st.shuffle=2.2;
   for(let k=0;k<n;k++){const d=ST.deck[k],g=makeCard(d.i);g.position.set(0,.06+k*.01,-.9);g.rotation.set(-Math.PI/2,0,0);ST.spread.push({g,d,picked:false});
     // 섞기: 좌우로 튀었다가 다시 모임
-    const sx=(k%2?1:-1)*(.4+rng()*.5);tween(g,{px:sx,pz:-.9+(rng()-.5)*.3,rz:(rng()-.5)*.6},.35,k*.03);tween(g,{px:0,pz:-.9,rz:0},.35,.45+k*.03);tween(g,{px:sx*.6,rz:(rng()-.5)*.4},.3,1.0+k*.02);tween(g,{px:0,rz:0},.3,1.4+k*.02)}
+    const a=k/n*Math.PI*2,ring=1.25;tween(g,{px:Math.cos(a)*ring,py:.9+Math.sin(a)*.5,pz:-1.2+Math.sin(a)*.35,rx:-.25,ry:0,rz:-a*.3},.55,k*.035);
+    tween(g,{px:Math.cos(a+1.4)*ring*.8,py:1.0+Math.sin(a+1.4)*.45,pz:-1.2+Math.sin(a+1.4)*.3,rz:-(a+1.4)*.3},.5,.6+k*.035);
+    tween(g,{px:0,py:.06+k*.01,pz:-.9,rx:-Math.PI/2,rz:0},.45,1.15+k*.035)}
   // 부채꼴로 펼치기
   setTimeout(()=>{const span=S.portrait?1.75:2.6;ST.spread.forEach((c,k)=>{const a=(k/(n-1)-.5)*span*.42,R=S.portrait?3.4:4.2;
       tween(c.g,{px:Math.sin(a)*R*.95,py:.04+k*.002,pz:-.1-Math.cos(a)*R+R*.92,rx:-Math.PI/2,ry:0,rz:-a},.55,k*.025)});
@@ -586,7 +600,7 @@ $('#topbtn').onclick=openHistory;
 $('#shuffleBtn').onclick=deal;
 $('#skipBtn').onclick=skipFocus;
 $('#readBtn').onclick=()=>{if(ST.picks.length)reveal()};
-$('#startBtn').onclick=()=>{audio();$('#snd').style.display='block';$('#start').hidden=true;openSetup()};
+$('#startBtn').onclick=()=>{S.introGo=true;audio();$('#snd').style.display='block';$('#start').hidden=true;openSetup()};
 $('#snd').onclick=()=>{SND.on=!SND.on;audio();if(SND.m)SND.m.gain.value=SND.on?.6:0;$('#snd').textContent=SND.on?'소리 켬':'소리 끔';$('#snd').setAttribute('aria-pressed',SND.on)};
 document.addEventListener('pointerdown',()=>{if(SND.ctx&&SND.on){audio()}},true);
 const cvs=document.getElementById('gl');
@@ -612,9 +626,10 @@ function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
     a.needsUpdate=true;b.pts.material.opacity=Math.max(0,b.life);if(b.life<=0){S.sc.remove(b.pts);S.bursts.splice(k,1)}}
   // 선택 대기 카드: 살짝 떠오르는 숨쉬기
   if(ST.phase==='pick')ST.spread.forEach((c,k)=>{if(!c.picked&&!tweens.some(w=>w.o===c.g)){c.ly=(c.ly||0)+((c.lift||0)-(c.ly||0))*.25;if(c.base===undefined)c.base=c.g.position.z;
-    c.g.position.y=.04+k*.002+Math.max(0,Math.sin(T*2+k*.5))*.03+c.ly*.35;c.g.position.z=c.base+c.ly*.3}});
+    c.g.position.y=.04+k*.002+Math.max(0,Math.sin(T*2+k*.5))*.03+c.ly*.35;c.g.position.z=c.base+c.ly*.3;c.g.rotation.x=-Math.PI/2+c.ly*.55}});
   if(sayT>0){sayT-=dt;if(sayT<=0)$('#say').classList.remove('on')}
-  S.r.render(S.sc,S.cam);requestAnimationFrame(loop)}
+  if(S.introGo&&S.intro>0){S.intro=Math.max(0,S.intro-dt/2.6);placeCam()}
+  if(S.comp){try{S.comp.render()}catch(e){S.comp=null;S.r.render(S.sc,S.cam)}}else S.r.render(S.sc,S.cam);requestAnimationFrame(loop)}
 function boot(){
   if(!window.THREE){$('#loading').textContent='3D를 불러오지 못했어요. 새로고침해 주세요.';return}
   try{initScene()}catch(e){$('#loading').textContent='이 기기에서는 3D를 켤 수 없어요.';return}
