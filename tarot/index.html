@@ -380,10 +380,14 @@ function burst(p){const N=40,pos=new Float32Array(N*3),vel=[];for(let k=0;k<N;k+
 
 /* ============ 9-0. 소리 ============ */
 const SND={ctx:null,on:true};
-function audio(){if(!SND.ctx){try{const C=window.AudioContext||window.webkitAudioContext;const c=SND.ctx=new C();SND.m=c.createGain();SND.m.gain.value=SND.on?.55:0;SND.m.connect(c.destination);amb()}catch(e){SND.ctx=null}}
+const SILENT='data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+function unlockIOS(){// 아이폰 무음 스위치·잠금 해제: 소리 세션을 '재생'으로 + 무음 오디오를 한 번 틀어 둠
+  try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
+  if(!SND.tag){try{SND.tag=new Audio(SILENT);SND.tag.loop=true;SND.tag.setAttribute('playsinline','');SND.tag.play().catch(()=>{})}catch(e){}}else if(SND.tag.paused)SND.tag.play().catch(()=>{})}
+function audio(){unlockIOS();if(!SND.ctx){try{const C=window.AudioContext||window.webkitAudioContext;const c=SND.ctx=new C();SND.m=c.createGain();SND.m.gain.value=SND.on?.8:0;SND.m.connect(c.destination);amb()}catch(e){SND.ctx=null}}
   if(SND.ctx&&SND.ctx.state==='suspended')SND.ctx.resume();return SND.ctx}
-function amb(){const c=SND.ctx,g=c.createGain(),lp=c.createBiquadFilter();g.gain.value=.045;lp.type='lowpass';lp.frequency.value=700;g.connect(lp);lp.connect(SND.m);
-  [110,164.81,220,277.18].forEach((f,i)=>{const o=c.createOscillator(),lf=c.createOscillator(),lg=c.createGain();o.type=i%2?'triangle':'sine';o.frequency.value=f;lf.frequency.value=.05+i*.03;lg.gain.value=1.5;lf.connect(lg);lg.connect(o.frequency);o.connect(g);o.start();lf.start()})}
+function amb(){const c=SND.ctx,g=c.createGain(),lp=c.createBiquadFilter();g.gain.value=.07;lp.type='lowpass';lp.frequency.value=1400;g.connect(lp);lp.connect(SND.m);
+  [220,329.63,440,554.37].forEach((f,i)=>{const o=c.createOscillator(),lf=c.createOscillator(),lg=c.createGain();o.type=i%2?'triangle':'sine';o.frequency.value=f;lf.frequency.value=.05+i*.03;lg.gain.value=1.5;lf.connect(lg);lg.connect(o.frequency);o.connect(g);o.start();lf.start()})}
 function chime(f=880,dur=1.4,vol=.16,delay=0){const c=audio();if(!c)return;const t=c.currentTime+delay;[1,2.01,3.02].forEach((m,i)=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f*m;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol/(i+1),t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+dur/(i+1));o.connect(g);g.connect(SND.m);o.start(t);o.stop(t+dur)})}
 function rustle(vol=.12,delay=0){const c=audio();if(!c)return;const t=c.currentTime+delay,n=Math.floor(c.sampleRate*.09),b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);for(let k=0;k<n;k++)d[k]=(Math.random()*2-1)*(1-k/n);
   const s=c.createBufferSource(),bp=c.createBiquadFilter(),g=c.createGain();s.buffer=b;bp.type='bandpass';bp.frequency.value=2600;bp.Q.value=.8;g.gain.value=vol;s.connect(bp);bp.connect(g);g.connect(SND.m);s.start(t)}
@@ -523,7 +527,8 @@ $('#topbtn').onclick=openHistory;
 $('#shuffleBtn').onclick=deal;
 $('#readBtn').onclick=()=>{if(ST.picks.length)reveal()};
 $('#startBtn').onclick=()=>{audio();$('#snd').style.display='block';$('#start').hidden=true;openSetup()};
-$('#snd').onclick=()=>{SND.on=!SND.on;audio();if(SND.m)SND.m.gain.value=SND.on?.55:0;$('#snd').textContent=SND.on?'소리 켬':'소리 끔';$('#snd').setAttribute('aria-pressed',SND.on)};
+$('#snd').onclick=()=>{SND.on=!SND.on;audio();if(SND.m)SND.m.gain.value=SND.on?.8:0;$('#snd').textContent=SND.on?'소리 켬':'소리 끔';$('#snd').setAttribute('aria-pressed',SND.on)};
+document.addEventListener('pointerdown',()=>{if(SND.ctx&&SND.on){audio()}},true);
 const cvs=document.getElementById('gl');
 cvs.addEventListener('pointermove',e=>{S.look.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1)});
 cvs.addEventListener('pointerdown',e=>{S.look.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);pickAt(e.clientX,e.clientY)});
