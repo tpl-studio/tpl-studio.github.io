@@ -83,6 +83,9 @@ input[type=text]{width:100%;font:inherit;font-size:16px;padding:10px 14px;border
 .pred{border:1px solid var(--gold);border-radius:16px;padding:12px 14px;margin-bottom:12px;background:linear-gradient(180deg,rgba(226,184,102,.16),rgba(226,184,102,.04))}
 .pred b.serif{color:var(--gold2)}.pred .pv{font-size:22px;margin:6px 0 2px;font-family:"Gowun Batang",serif}.pred p{margin:4px 0}
 .gauge{display:flex;align-items:center;gap:6px;margin:8px 0 4px}.gauge i{width:22px;height:10px;border-radius:6px;background:rgba(255,255,255,.12)}.gauge i.on{background:var(--gold)}.gauge span{font-size:14px;color:var(--soft);margin-left:6px}
+.ym{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;margin-top:8px;font-size:14px}.ym b{color:var(--gold2);font-weight:400}
+#guide{position:fixed;inset:0;background:rgba(5,6,14,.72);display:grid;place-items:center;padding:20px;z-index:5}#guide[hidden]{display:none}
+.gbox{max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px 18px 14px}.gbox p{margin:8px 0}
 @keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
 @media(prefers-reduced-motion:reduce){.sheet.on{animation:none}#say{transition:none}}
 </style>
@@ -96,6 +99,9 @@ input[type=text]{width:100%;font:inherit;font-size:16px;padding:10px 14px;border
 <div id="say"></div>
 <button id="topbtn">상담 기록</button>
 <button id="snd" aria-pressed="true">소리 켬</button>
+<div id="guide" hidden><div class="gbox"><b class="serif" style="font-size:22px;color:var(--cream)">설이네 타로 이용법</b>
+  <p>① 궁금한 주제와 방식을 골라요</p><p>② 설이가 카드를 섞으면, 손가락으로 훑다가 끌리는 카드에서 떼요</p><p>③ 카드가 한 장씩 뒤집히며 설이가 풀어 줘요</p>
+  <p class="kw">매일 <b>🌙 오늘의 카드</b>로 출석 도장도 모아 보세요.</p><button class="gold go" id="guideOk">알겠어요</button></div></div>
 <section id="start" hidden>
   <div class="box">
     <p class="en">DOG TAROT</p>
@@ -294,6 +300,8 @@ const MODES=[
  {id:'three',n:'쓰리 카드',d:'과거 · 현재 · 미래',count:3,pos:['과거','현재','미래']},
  {id:'five',n:'파이브 카드',d:'상황 · 장애물 · 조언 · 주변 · 결과',count:5,pos:['현재 상황','장애물','조언','주변 상황','결과']},
  {id:'celtic',n:'켈틱 크로스',d:'열 장 종합 상담',count:10,pos:['현재','가로막는 것','바탕','지나간 일','바라는 것','가까운 미래','나 자신','주변 환경','희망과 두려움','최종 결과']},
+ {id:'year',n:'🎍 2027 신년 타로',d:'1월~12월 월별 운세',count:12,cat:'all',pos:["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"]},
+ {id:'match',n:'💑 궁합',d:'나 · 그 사람 · 우리',count:4,cat:'love',pos:['나의 마음','그 사람의 마음','두 사람의 흐름','앞으로의 관계']},
  {id:'free',n:'자유 선택',d:'끌리는 만큼 1~5장',count:5,free:true,pos:['첫 번째','두 번째','세 번째','네 번째','다섯 번째']}];
 const QSUG={love:['그 사람도 나를 좋아할까요?','이번 달에 새 인연이 생길까요?','지금 고백해도 될까요?'],again:['그 사람이 다시 연락할까요?','재회할 수 있을까요?','먼저 연락해도 될까요?'],heart:['그 사람은 지금 나를 어떻게 생각할까요?','왜 연락이 뜸해졌을까요?','그 사람 마음에 내가 있을까요?'],
  money:['이번 달 돈 흐름은 어떨까요?','부수입을 시작해도 될까요?','저축을 늘릴 수 있을까요?'],work:['이직해도 될까요?','이번 면접 잘 될까요?','지금 회사에서 인정받을 수 있을까요?'],biz:['새 사업을 시작해도 될까요?','이번 계획은 잘 될까요?','동업해도 될까요?'],
@@ -308,9 +316,14 @@ function shuffleDeck(){const d=DECK.map((c,i)=>({i,rev:REV_ON&&rng()<0.35}));for
 const pickOne=a=>a[Math.floor(rng()*a.length)];
 const field=(c,cat,rev)=>{const f=CATS.find(x=>x[0]===cat)[2];const base=f==='gen'?(rev?c.rev:c.up):c[f];return rev&&f!=='gen'?`${base} 다만 역방향이라 이런 면도 살펴보세요: ${c.rev}`:base};
 const josa=(w,a,b)=>{const ch=w[w.length-1];if(/[0-9]/.test(ch))return w+('136780'.includes(ch)?a:b);const c=w.charCodeAt(w.length-1)-44032;return w+(c>=0&&c<11172&&c%28?a:b)};
-const PAST=/과거|지나간|바탕/,NOW=/현재|나 자신|오늘의 메시지|첫 번째|두 번째|세 번째|네 번째|다섯 번째/,FUT=/미래|결과|가까운/,BLOCK=/장애물|가로막/;
+const MONTH=/^(\d+)월$/,PAST=/과거|지나간|바탕/,NOW=/현재|나 자신|오늘의 메시지|첫 번째|두 번째|세 번째|네 번째|다섯 번째/,FUT=/미래|결과|가까운/,BLOCK=/장애물|가로막/;
 function posText(pos,c,rev,cat){
   const f=CATS.find(x=>x[0]===cat)[2],topic=f==='gen'?'':c[f],core=rev?c.rev:c.up,nm=josa(c.name,'이','가');
+  const mm=pos.match(MONTH);if(mm)return `${pos}에는 ${rev?c.rev:c.up}${!rev&&topic?' '+topic:''}`;
+  if(pos==='나의 마음')return `당신 마음은요, ${core} ${rev?'':c.love}`;
+  if(pos==='그 사람의 마음')return `그 사람 마음은요… ${core} ${rev?'아직 마음을 다 열지 못했어요.':c.love}`;
+  if(pos==='두 사람의 흐름')return `두 사람 사이에는 이런 기운이 흘러요. ${core}`;
+  if(pos==='앞으로의 관계')return `앞으로 두 사람은… ${core} ${rev?'서두르지 말고 천천히 맞춰 가세요.':c.love}`;
   if(pos==='조언')return `${josa(c.scene,'이','가')} 보여요. 설이가 권하는 길이에요. ${c.advice}${rev?' 다만 서두르지 말고 한 박자 쉬어 가세요.':''}`;
   if(pos==='주변 상황'||pos==='주변 환경')return `주변 분위기는 ${nm} 말해 줘요. ${rev?c.rev:c.rel}`;
   if(pos==='희망과 두려움')return `마음 깊이 바라면서도 두려운 게 보여요. ${core}`;
@@ -323,7 +336,7 @@ function predict(cards,mode){
   // 예스 점수: 결과·미래 자리는 두 배. 역방향은 기운이 꺾임.
   let sum=0,w=0;cards.forEach((x,k)=>{const pos=mode.pos[k],wt=FUT.test(pos)?2:BLOCK.test(pos)?1.2:1,y=x.rev?-(Math.abs(x.c.yes)*.5)-.5:x.c.yes;sum+=y*wt;w+=wt});
   const v=sum/w,level=Math.max(1,Math.min(5,Math.round(3+v*1.2)));
-  const verdict=v>=.9?['🟢','예스 쪽이에요','카드들이 고개를 끄덕이고 있어요.']:v<=-.4?['🔴','지금은 노 쪽이에요','지금은 때가 아니라고 말해요. 하지만 흐름은 바뀔 수 있어요.']:['🟡','반반이에요','당신의 선택과 행동이 결과를 정해요.'];
+  const verdict=level>=4?['🟢','예스 쪽이에요','카드들이 고개를 끄덕이고 있어요.']:level<=2?['🔴','지금은 노 쪽이에요','지금은 때가 아니라고 말해요. 하지만 흐름은 바뀔 수 있어요.']:['🟡','반반이에요','당신의 선택과 행동이 결과를 정해요.'];
   const key=[...cards].reverse().find((x,k)=>FUT.test(mode.pos[cards.length-1-k]))||cards[cards.length-1];
   return {level,verdict,timing:key.c.timing,label:['낮음','조금 낮음','보통','높음','아주 높음'][level-1]};
 }
@@ -341,17 +354,24 @@ function interpret(st){
   if(revN>=Math.ceil(cards.length/2)&&cards.length>1)combo.push('역방향이 많아요. 막힌 곳을 정비하고 속도를 늦추라는 신호예요.');
   if(!combo.length)combo.push(cards.length===1?`「${cards[0].c.kw}」의 기운이 오늘 당신 곁에 있어요.`:'카드들이 고르게 섞였어요. 한쪽으로 치우치지 않은, 균형 잡힌 흐름이에요.');
   const op=pickOne(OPENERS[f]||OPENERS.gen),first=cards[0];
-  const summary=(cards.length>1?`${op} ${cards.map(x=>x.c.name+(x.rev?'(역)':'')).join(', ')} 카드가 나왔어요. ${(cards.find((x,k)=>NOW.test(st.mode.pos[k]))||first).c.cold}`:`${op} ${josa(first.c.scene,'이','가')} 보이네요.`).replace(/\s+/g,' ').trim();
+  const summary=(cards.length>1?`${op} ${cards.length>5?`카드 ${cards.length}장이 펼쳐졌어요.`:cards.map(x=>x.c.name+(x.rev?'(역)':'')).join(', ')+' 카드가 나왔어요.'} ${(cards.find((x,k)=>NOW.test(st.mode.pos[k]))||first).c.cold}`:`${op} ${josa(first.c.scene,'이','가')} 보이네요.`).replace(/\s+/g,' ').trim();
   const lastC=cards[cards.length-1];
   const flow=cards.length===1?(lastC.rev?'지금은 숨 고르기가 필요한 흐름이에요. 급하게 움직이면 손해예요.':'오늘은 이 카드의 기운을 따라가면 좋아요.'):
     (lastC.rev?`마지막 「${st.mode.pos[cards.length-1]}」 자리의 ${josa(lastC.c.name,'이','가')} 거꾸로 섰어요. 결과는 아직 정해지지 않았고, 지금의 선택으로 바꿀 수 있어요.`:`마지막 「${st.mode.pos[cards.length-1]}」 자리에 ${josa(lastC.c.name,'이','가')} 바로 섰어요. ${lastC.c.up}`);
   const caution=[...new Set(cards.filter(x=>x.rev).map(x=>x.c.rev).concat([first.c.caution||'']).filter(Boolean))].slice(0,2).join(' ');
   const adv=(cards.find((x,k)=>st.mode.pos[k]==='조언')||lastC).c.advice;
   const pred=safe?predict(cards,st.mode):null;
+  let year=null,match=null;
+  if(st.mode.id==='year'){const sc=cards.map((x,k)=>({m:k+1,v:x.rev?-(Math.abs(x.c.yes)*.5)-.5:x.c.yes,c:x.c}));const best=[...sc].sort((a,b)=>b.v-a.v)[0],worst=[...sc].sort((a,b)=>a.v-b.v)[0];
+    year={months:sc.map(o=>({m:o.m,mark:o.v>=1?'🟢':o.v<=-.5?'🔴':'🟡',name:o.c.name})),best,worst}}
+  if(st.mode.id==='match'){const v=cards.map(x=>x.rev?-(Math.abs(x.c.yes)*.5)-.5:x.c.yes),avg=(v[0]+v[1]+v[2]*1.2+v[3]*1.5)/4.7;
+    match={score:Math.max(28,Math.min(99,Math.round(68+avg*14+(ids.includes('M6')?6:0)+(ids.includes('c2')?5:0)))),pair:cards[0].c.name+' × '+cards[1].c.name}}
   const notice=CRISIS.test(q)?'혼자 감당하기 힘든 마음이라면 지금 바로 이야기할 곳이 있어요. 자살예방상담전화 109 (24시간)에 전화해 주세요. 설이가 곁에서 응원할게요.':
     NOPRED.test(q)?'이 질문은 건강·돈·법과 관련돼 있어서 설이는 예측하지 않을게요. 꼭 전문가와 상의하세요. 카드는 마음을 돌아보는 데만 써 주세요.':'';
   const lastWord=pickOne(['설이가 꼬리 흔들며 응원할게요.','멍! 오늘도 잘 해낼 거예요.','간식처럼 좋은 일이 곧 굴러올 거예요.','발자국은 당신이 만드는 거예요. 멍.','킁킁… 좋은 냄새가 나요. 곧 웃을 일이 생길 거예요.']);
-  return {items,summary,combo:combo.join(' '),flow,caution,advice:adv,lastWord,pred,notice};
+  if(year)combo.unshift(`2027년에 가장 빛나는 달은 ${year.best.m}월(${year.best.c.name})이고, 조심할 달은 ${year.worst.m}월(${year.worst.c.name})이에요.`);
+  if(match)combo.unshift(`두 사람 궁합은 ${match.score}점! ${match.score>=85?'설이가 꼬리를 세차게 흔드는 궁합이에요.':match.score>=65?'서로 맞춰 가면 점점 좋아지는 궁합이에요.':'다른 점이 많지만 그래서 배울 게 많은 궁합이에요.'}`);
+  return {items,summary,combo:combo.join(' '),flow,caution,advice:adv,lastWord,pred,notice,year,match};
 }
 
 /* ============ 5. 카드 그림 (DOG TAROT 독자 디자인) ============ */
@@ -616,12 +636,13 @@ function paintSetup(){
   $('#qsug').innerHTML=(QSUG[ST.cat]||[]).map(q=>`<button class="chip" data-q="${esc(q)}">${esc(q)}</button>`).join('');
   [...document.querySelectorAll('#revs .chip')].forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.r==='1')===REV_ON)));
   $('#cats').innerHTML=CATS.map(c=>`<button class="chip" data-c="${c[0]}" aria-pressed="${c[0]===ST.cat}">${c[1]}</button>`).join('')}
-$('#modes').onclick=e=>{const b=e.target.closest('button');if(b){ST.mode=MODES.find(m=>m.id===b.dataset.m);paintSetup()}};
+$('#modes').onclick=e=>{const b=e.target.closest('button');if(b){ST.mode=MODES.find(m=>m.id===b.dataset.m);if(ST.mode.cat)ST.cat=ST.mode.cat;paintSetup()}};
 $('#qsug').onclick=e=>{const b=e.target.closest('button');if(b){$('#qin').value=b.dataset.q;try{navigator.vibrate&&navigator.vibrate(10)}catch(err){}}};
 $('#revs').onclick=e=>{const b=e.target.closest('button');if(!b)return;REV_ON=b.dataset.r==='1';try{localStorage.setItem('seoltarot_rev',REV_ON?'1':'0')}catch(err){}paintSetup()};
 $('#cats').onclick=e=>{const b=e.target.closest('button');if(b){ST.cat=b.dataset.c;paintSetup()}};
 function clearCards(){(S.ribbons||[]).forEach(m=>S.sc.remove(m));S.ribbons=[];ST.spread.forEach(c=>S.sc.remove(c.g));ST.spread=[];ST.picks=[];ST.slots=[];tweens.length=0}
 function slotPos(k,n){ // 선택한 카드가 놓일 자리
+  if(n===12){const c=k%4,r=Math.floor(k/4),gx=S.portrait?.6:.7;return{px:(c-1.5)*gx,py:.03+k*.003,pz:.25+r*.82,rz:0}}
   if(n===10){const cross=[[0,0,0],[0,0,Math.PI/2],[0,.72,0],[-.8,0,0],[0,-.72,0],[.8,0,0]];if(k<6){const [x,z,r]=cross[k];return{px:x-.7,py:.03+k*.004,pz:.95+z*.95,rz:r}}return{px:1.55,py:.03,pz:.95+(-1.1+(k-6)*.72)*.95,rz:0}}
   const gap=n>3?(S.portrait?.66:.74):.9,x0=-(n-1)*gap/2;return{px:x0+k*gap,py:.03,pz:1.05,rz:0}}
 function deal(){
@@ -694,6 +715,8 @@ function showResult(){
      <p class="kw">⏳ 흐름이 움직이는 시기: <b>${esc(R.pred.timing)}</b></p><p class="kw">재미로 보는 예감이에요. 결과를 보장하지 않아요.</p></div>`:''}
    ${R.items.map((it,k)=>`<div class="item"><img class="thumb ${it.rev?'rev':''}" alt="${esc(it.name)} 카드" src="${cardImg(ST.picks[k].i)}">
      <div><div class="pos">${esc(it.pos)}</div><div class="nm">${esc(it.name)}<span class="dir">${it.rev?'역방향':'정방향'}</span></div><div class="kw">${esc(it.kw)}</div><p>${esc(it.text)}</p></div></div>`).join('')}
+   ${R.match?`<div class="pred" style="text-align:center"><b class="serif">💑 두 사람의 궁합</b><div class="pv" style="font-size:40px">${R.match.score}점</div><p class="kw">${esc(R.match.pair)}</p></div>`:''}
+   ${R.year?`<div class="pred"><b class="serif">🎍 2027 한눈에 보기</b><div class="ym">${R.year.months.map(o=>`<span>${o.mark} <b>${o.m}월</b> ${esc(o.name)}</span>`).join('')}</div></div>`:''}
    <div class="blk"><b>카드의 조합</b><p>${esc(R.combo)}</p></div>
    <div class="blk"><b>앞으로의 흐름</b><p>${esc(R.flow)}</p></div>
    <div class="blk"><b>주의할 점</b><p>${esc(R.caution)}</p></div>
@@ -702,19 +725,33 @@ function showResult(){
    <div class="ai" id="aiBox" hidden><b class="serif" style="color:var(--gold2)">설이의 자세한 상담 (AI)</b><p id="aiText" class="wait">설이가 카드를 다시 들여다보는 중…</p></div>
    <div class="row wrap2"><button class="line" id="aiBtn" hidden>설이에게 자세히 묻기</button><button class="line" id="voiceBtn" hidden>설이 목소리로 듣기</button><button class="line" id="imgBtn" hidden>결과 이미지 저장</button></div>
    <div class="row"><button class="gold" id="againBtn">다시 타로 보기</button><button class="line" id="copyBtn">결과 복사</button></div>
+   <div class="row"><button class="gold" id="shareBtn" hidden>📤 친구에게 공유 · 스토리 올리기</button></div>
    <p class="fine">재미와 자기 성찰을 위한 타로예요. 미래를 확정하지 않으며, 건강·돈·법 문제는 전문가와 상의하세요.</p>`;
   show('#result',true);$('#result').classList.remove('min');
   $('#peekBtn').onclick=()=>{const m=$('#result').classList.toggle('min');$('#peekBtn').textContent=m?'해석 보기':'탁자 보기';$('#result').scrollTop=0};
   const rec={at:Date.now(),mode:ST.mode.n,cat,q:ST.q,cards:R.items.map(x=>x.name+(x.rev?'(역)':'')),sum:R.summary,advice:R.advice};
   try{const h=JSON.parse(localStorage.getItem('seoltarot')||'[]');h.unshift(rec);localStorage.setItem('seoltarot',JSON.stringify(h.slice(0,30)))}catch(e){}
   wireExtras(R,cat);
+  if(!window.claude&&navigator.share){const b=$('#shareBtn');b.hidden=false;b.onclick=async()=>{const url='https://tpl-studio.github.io/tarot/';
+    const text=`🔮 설이 도사가 그러는데… ${R.pred?R.pred.verdict[1]:R.items[0].name+' 카드'}래요! 나도 봐볼래?`;
+    try{const blob=await resultImage(R,cat),f=new File([blob],'seol-tarot.png',{type:'image/png'});
+      if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f],text:text+' '+url});else await navigator.share({title:'설이네 타로',text,url})}catch(e){}}}
   $('#againBtn').onclick=()=>{show('#result',false);clearCards();openSetup()};
   $('#copyBtn').onclick=async e=>{const t=`[설이네 타로] ${ST.mode.n} · ${cat}${ST.q?'\n질문: '+ST.q:''}\n${R.items.map(x=>`${x.pos}: ${x.name}(${x.rev?'역':'정'}) - ${x.text}`).join('\n')}${R.pred?`\n설이의 예감: ${R.pred.verdict[1]} · 가능성 ${R.pred.label} · 시기 ${R.pred.timing}`:''}\n조언: ${R.advice}\n설이: ${R.lastWord}`;
     try{await navigator.clipboard.writeText(t);e.target.textContent='복사했어요'}catch(err){e.target.textContent='복사가 막혀 있어요'}};
 }
 /* ============ 9-1. AI 상담 · 목소리 · 이미지 (쓸 수 있을 때만 버튼이 보임) ============ */
 const cap=n=>window.claude&&window.claude.use?window.claude.use(n).catch(()=>null):Promise.resolve(null);
-function wireExtras(R,cat){
+const AI_URL='';// 예: https://seol-tarot-ai.<계정>.workers.dev — 키 넣고 배포되면 채움
+function webAI(R,cat){if(window.claude||!AI_URL)return;const b=$('#aiBtn');
+  fetch(AI_URL+'/health').then(r=>r.ok&&ST.R===R?(b.hidden=false):0).catch(()=>{});
+  b.onclick=async()=>{b.disabled=true;$('#aiBox').hidden=false;const out=$('#aiText');out.className='wait';out.textContent='설이가 카드를 다시 들여다보는 중…';
+    try{const r=await fetch(AI_URL+'/reading',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:ST.mode.n,cat,q:ST.q,
+        pred:R.pred?`${R.pred.verdict[1]} · 가능성 ${R.pred.label} · 시기 ${R.pred.timing}`:'',cards:R.items.map(x=>({pos:x.pos,name:x.name,rev:x.rev,kw:x.kw,text:x.text}))})});
+      const j=await r.json();if(!r.ok)throw j;out.className='';out.textContent=j.text}
+    catch(e){out.className='wait';out.textContent=e&&e.error==='rate_limited'?'오늘은 설이가 너무 많이 이야기해서 쉬는 중이에요. 내일 다시 물어봐 주세요.':'지금은 자세한 상담을 할 수 없어요. 위 해석을 참고해 주세요.'}
+    b.disabled=false}}
+function wireExtras(R,cat){webAI(R,cat);
   cap('sample').then(sample=>{if(!sample||ST.R!==R)return;const b=$('#aiBtn');b.hidden=false;
     b.onclick=async()=>{b.disabled=true;$('#aiBox').hidden=false;const out=$('#aiText');out.className='wait';out.textContent='설이가 카드를 다시 들여다보는 중…';
       const cards=R.items.map(x=>`- ${x.pos}: ${x.name} (${x.rev?'역방향':'정방향'}) / 키워드: ${x.kw} / 기본 의미: ${x.text}`).join('\n');
@@ -756,10 +793,10 @@ async function resultImage(R,cat){
     g.fillStyle='#e2b866';g.font=`${n>5?20:24}px "Gowun Dodum",sans-serif`;g.fillText(`${it.pos}${it.rev?' · 역':''}`,x,y+chh+34)});
   let y=y0+rows*(chh+70)+40;g.textAlign='left';
   const block=(title,txt,lines)=>{g.fillStyle='#e2b866';g.font='bold 34px "Gowun Batang",serif';g.fillText(title,90,y);y+=50;g.fillStyle='#f4ecdb';g.font='32px "Gowun Dodum",sans-serif';y=wrapText(g,txt,90,y,W-180,46,lines)+18};
-  block('전체 운세',R.summary,5);if(R.pred)block('🔮 설이의 예감',`${R.pred.verdict[1]} · 가능성 ${R.pred.label} · ${R.pred.timing}`,2);block('카드의 조합',R.combo,3);block('설이의 조언',R.advice,2);
+  if(R.match)block('💑 궁합',`${R.match.score}점 · ${R.match.pair}`,1);if(R.year)block('🎍 2027 가장 빛나는 달',`${R.year.best.m}월 ${R.year.best.c.name} · 조심할 달 ${R.year.worst.m}월`,1);block('전체 운세',R.summary,5);if(R.pred)block('🔮 설이의 예감',`${R.pred.verdict[1]} · 가능성 ${R.pred.label} · ${R.pred.timing}`,2);block('카드의 조합',R.combo,3);block('설이의 조언',R.advice,2);
   const face=await loadImg(SEOL_HEAD);if(face){const s=300;g.save();g.beginPath();g.arc(W/2,H-330,s/2,0,7);g.fillStyle='#f4ecdb';g.fill();g.clip();g.drawImage(face,W/2-s*.62,H-330-s*.42,s*1.24,s*1.24*face.height/face.width);g.restore();g.strokeStyle='#e2b866';g.lineWidth=5;g.beginPath();g.arc(W/2,H-330,s/2,0,7);g.stroke()}
   g.textAlign='center';g.fillStyle='#f4ecdb';g.font='34px "Gowun Batang",serif';wrapText(g,R.lastWord,W/2,H-140,W-200,44,2);
-  g.fillStyle='#8f88a6';g.font='24px "Gowun Dodum",sans-serif';g.fillText('재미로 보는 타로 · 설이네 스튜디오',W/2,H-70);
+  g.fillStyle='#e2b866';g.font='bold 30px "Gowun Dodum",sans-serif';g.fillText('나도 해보기 👉 tpl-studio.github.io/tarot',W/2,H-82);g.fillStyle='#8f88a6';g.font='22px "Gowun Dodum",sans-serif';g.fillText('재미로 보는 타로 · 설이네 스튜디오',W/2,H-48);
   return new Promise(r=>c.toBlob(r,'image/png'));
 }
 function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
@@ -780,7 +817,8 @@ $('#shuffleBtn').onclick=deal;
 $('#skipBtn').onclick=skipFocus;
 $('#readBtn').onclick=()=>{if(ST.picks.length)reveal()};
 $('#dailyBtn').onclick=()=>{S.introGo=true;audio();$('#snd').style.display='block';$('#topbtn').style.display='block';$('#start').hidden=true;startDaily()};
-$('#startBtn').onclick=()=>{S.introGo=true;audio();$('#snd').style.display='block';$('#start').hidden=true;openSetup()};
+function firstGuide(go){let seen=false;try{seen=localStorage.getItem('seoltarot_guide')==='1'}catch(e){}if(seen)return go();$('#guide').hidden=false;$('#guideOk').onclick=()=>{try{localStorage.setItem('seoltarot_guide','1')}catch(e){}$('#guide').hidden=true;go()}}
+$('#startBtn').onclick=()=>{S.introGo=true;audio();$('#snd').style.display='block';$('#start').hidden=true;firstGuide(openSetup)};
 $('#snd').onclick=()=>{SND.on=!SND.on;audio();if(SND.m)SND.m.gain.value=SND.on?.6:0;$('#snd').textContent=SND.on?'소리 켬':'소리 끔';$('#snd').setAttribute('aria-pressed',SND.on)};
 document.addEventListener('pointerdown',()=>{if(SND.ctx&&SND.on){audio()}},true);
 const cvs=document.getElementById('gl');
@@ -794,8 +832,9 @@ cvs.addEventListener('pointerup',e=>{if(!press)return;press=null;if(ST.phase==='
 cvs.addEventListener('pointercancel',()=>{press=null;setHover(null)});
 
 /* ============ 10. 루프 ============ */
-let last=performance.now(),T=0;
-function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
+let last=performance.now(),T=0,fpsN=0,fpsT=0,LIGHT=false;
+function lightMode(){if(LIGHT)return;LIGHT=true;S.comp=null;S.r.setPixelRatio(1);S.r.shadowMap.enabled=false;S.dust.visible=false;S.smoke.forEach(x=>x.visible=false);resize()}
+function loop(now){const raw=(now-last)/1000,dt=Math.min(.05,raw);last=now;T+=dt;if(!LIGHT&&T>2){fpsT+=raw;fpsN++;if(fpsT>3){if(fpsN/fpsT<26)lightMode();fpsT=0;fpsN=0}}
   runTweens(dt);S.master.update(T,dt);
   S.candles.forEach(c=>{const f=1+Math.sin(T*9+c.ph)*.08+Math.sin(T*23+c.ph)*.05;c.l.intensity=.9*f;c.f.scale.set(f,1.8*f,f)});
   S.smoke.forEach(sp=>{sp.userData.t+=dt;const u=(sp.userData.t%6)/6;sp.position.set(S.burner.x+Math.sin(u*9+sp.id)*.12*u,S.burner.y+.1+u*2.2,S.burner.z+Math.cos(u*7)*.08*u);sp.scale.setScalar(.15+u*.6);sp.material.opacity=Math.sin(u*Math.PI)*.35});
